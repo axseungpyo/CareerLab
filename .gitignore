@@ -37,5 +37,10 @@ htmlcov/
 # Runtime settings (contains API keys)
 backend/data/
 
+# Screenshots / temp
+*.png
+.bkit/
+.playwright-mcp/
+
 # Logs
 *.log
