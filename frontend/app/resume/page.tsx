@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import EmptyState from "@/components/empty-state";
 import { api } from "@/lib/api";
 import type { Resume } from "@/lib/types";
 
@@ -46,21 +48,17 @@ export default function ResumesPage() {
       </div>
 
       {resumes.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <p className="text-muted-foreground mb-4">
-              아직 작성한 자소서가 없습니다.
-            </p>
-            <Link href="/resume/new">
-              <Button>첫 자소서 만들기</Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={FileText}
+          title="아직 작성한 자소서가 없어요"
+          description="채용공고를 붙여넣으면 AI가 기업에 맞춘 자소서를 생성합니다"
+          action={{ label: "첫 자소서 만들기", href: "/resume/new" }}
+        />
       ) : (
         <div className="grid gap-4">
           {resumes.map((resume) => (
             <Link key={resume.id} href={`/resume/${resume.id}`}>
-              <Card className="hover:border-primary transition-colors cursor-pointer">
+              <Card className="hover:border-primary transition-all cursor-pointer hover-card">
                 <CardHeader className="py-3">
                   <CardTitle className="text-base flex items-center justify-between">
                     {resume.title}

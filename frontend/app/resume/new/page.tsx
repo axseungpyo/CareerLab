@@ -128,17 +128,22 @@ export default function NewResumePage() {
       <h1 className="text-2xl font-bold">새 자소서 생성</h1>
 
       {/* Progress */}
-      <div className="flex gap-2">
+      <div className="flex items-center gap-3">
         {(["입력", "분석", "매칭", "생성"] as const).map((label, i) => {
           const steps: Step[] = ["input", "analyzing", "matched", "generating"];
           const currentIdx = steps.indexOf(step);
           return (
-            <Badge
-              key={label}
-              variant={i <= currentIdx ? "default" : "secondary"}
-            >
-              {i + 1}. {label}
-            </Badge>
+            <div key={label} className="flex items-center gap-3">
+              {i > 0 && (
+                <div className={`w-6 h-0.5 rounded ${i <= currentIdx ? "bg-primary" : "bg-muted"}`} />
+              )}
+              <Badge
+                variant={i <= currentIdx ? "default" : "secondary"}
+                className="px-3 py-1"
+              >
+                {i + 1}. {label}
+              </Badge>
+            </div>
           );
         })}
       </div>
@@ -149,8 +154,8 @@ export default function NewResumePage() {
           <CardHeader>
             <CardTitle>채용공고 입력</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
+          <CardContent className="space-y-5">
+            <div className="space-y-1.5">
               <Label>기업명 *</Label>
               <Input
                 value={companyName}
@@ -158,7 +163,7 @@ export default function NewResumePage() {
                 placeholder="예: 삼성전자"
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>채용공고 URL (선택)</Label>
               <Input
                 value={jobUrl}
@@ -166,7 +171,7 @@ export default function NewResumePage() {
                 placeholder="https://..."
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>채용공고 본문 *</Label>
               <Textarea
                 value={jobPosting}
@@ -175,7 +180,7 @@ export default function NewResumePage() {
                 placeholder="채용공고 내용을 붙여넣기 하세요"
               />
             </div>
-            <Button onClick={handleAnalyze} disabled={!companyName || !jobPosting}>
+            <Button onClick={handleAnalyze} disabled={!companyName || !jobPosting} className="btn-gradient border-0">
               기업 분석 시작
             </Button>
           </CardContent>
@@ -238,8 +243,8 @@ export default function NewResumePage() {
             <CardHeader>
               <CardTitle>자소서 생성 옵션</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
+            <CardContent className="space-y-5">
+              <div className="space-y-1.5">
                 <Label>자소서 문항 *</Label>
                 <Textarea
                   value={question}
@@ -248,8 +253,8 @@ export default function NewResumePage() {
                   placeholder="예: 지원 동기와 입사 후 포부를 작성해주세요."
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-2 gap-5">
+                <div className="space-y-1.5">
                   <Label>글자수 제한</Label>
                   <Input
                     type="number"
@@ -258,7 +263,7 @@ export default function NewResumePage() {
                     placeholder="예: 500"
                   />
                 </div>
-                <div>
+                <div className="space-y-1.5">
                   <Label>톤</Label>
                   <Select value={tone} onValueChange={(v) => v && setTone(v)}>
                     <SelectTrigger>
@@ -273,7 +278,7 @@ export default function NewResumePage() {
                   </Select>
                 </div>
               </div>
-              <Button onClick={handleGenerate} disabled={!question}>
+              <Button onClick={handleGenerate} disabled={!question} className="btn-gradient border-0">
                 자소서 생성
               </Button>
             </CardContent>

@@ -23,7 +23,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-background antialiased">
         <ThemeProvider>
           <Navigation />
-          <main className="container max-w-5xl mx-auto px-4 py-6">
+          <main className="container max-w-5xl mx-auto px-4 py-6 pb-20 md:pb-6">
             {children}
           </main>
           <Toaster />

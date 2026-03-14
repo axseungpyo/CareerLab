@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 
@@ -192,7 +193,19 @@ export default function SettingsPage() {
   }
 
   if (loading || !settings) {
-    return <div className="text-center py-12 text-muted-foreground">로딩 중...</div>;
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-32" />
+        <div className="flex gap-6">
+          <div className="w-48 space-y-2">
+            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-10 rounded-lg" />)}
+          </div>
+          <div className="flex-1 space-y-4">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-40 rounded-xl" />)}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -208,18 +221,21 @@ export default function SettingsPage() {
 
       <div className="flex gap-6 min-h-[500px]">
         {/* Sidebar */}
-        <nav className="w-44 shrink-0 space-y-1">
+        <nav className="w-48 shrink-0 space-y-1">
           {SIDEBAR_ITEMS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
               className={cn(
-                "flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg transition-all text-left",
+                "relative flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-lg transition-all text-left",
                 activeTab === id
                   ? "bg-primary/10 text-primary font-medium"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
               )}
             >
+              {activeTab === id && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-gradient-to-b from-indigo-500 to-violet-500 rounded-full" />
+              )}
               <Icon className="h-4 w-4" />
               {label}
             </button>

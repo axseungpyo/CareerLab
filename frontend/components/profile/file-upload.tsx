@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 
 interface FileUploadProps {
@@ -39,14 +40,14 @@ export default function FileUpload({ onParsed }: FileUploadProps) {
   );
 
   return (
-    <Card
-      className={`border-2 border-dashed transition-colors ${
-        dragging ? "border-primary bg-primary/5" : "border-muted"
-      }`}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragging(true);
-      }}
+    <div
+      className={cn(
+        "relative rounded-xl border-2 border-dashed p-8 transition-all",
+        dragging
+          ? "border-primary bg-primary/5 scale-[1.01]"
+          : "border-muted-foreground/20 hover:border-primary/50"
+      )}
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => {
         e.preventDefault();
@@ -55,11 +56,16 @@ export default function FileUpload({ onParsed }: FileUploadProps) {
         if (file) handleFile(file);
       }}
     >
-      <CardContent className="flex flex-col items-center justify-center py-8 gap-3">
-        <p className="text-sm text-muted-foreground">
-          {loading ? "파싱 중..." : "이력서 파일을 드래그하거나 클릭하여 업로드"}
-        </p>
-        <p className="text-xs text-muted-foreground">PDF, DOCX 지원</p>
+      <div className="flex flex-col items-center justify-center gap-3">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/30 dark:to-violet-900/30 flex items-center justify-center">
+          <Upload className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium">
+            {loading ? "AI가 이력서를 분석하고 있습니다..." : "이력서 파일을 드래그하거나 클릭하여 업로드"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">PDF, DOCX 지원</p>
+        </div>
         <Button
           variant="outline"
           size="sm"
@@ -78,7 +84,7 @@ export default function FileUpload({ onParsed }: FileUploadProps) {
           파일 선택
         </Button>
         {error && <p className="text-sm text-destructive">{error}</p>}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -165,9 +165,9 @@ export default function MockInterviewPage() {
               }`}
             >
               <div
-                className={`max-w-[80%] rounded-lg p-3 ${
+                className={`max-w-[80%] rounded-2xl p-3.5 ${
                   msg.role === "candidate"
-                    ? "bg-primary text-primary-foreground"
+                    ? "bg-gradient-to-br from-indigo-500 to-violet-500 text-white"
                     : "bg-muted"
                 }`}
               >
