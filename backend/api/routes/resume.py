@@ -143,22 +143,31 @@ async def list_item_versions(resume_id: str, question: str):
 # ── Export ──
 
 @router.get("/{resume_id}/export")
-async def export_resume(resume_id: str):
-    """Export resume as DOCX file."""
+async def export_resume(resume_id: str, format: str = "docx"):
+    """Export resume as DOCX or PDF file."""
     from fastapi.responses import Response
     from modules.resume.exporter import ResumeExporter
 
     exporter = ResumeExporter()
     try:
-        docx_bytes = exporter.to_docx(resume_id)
+        if format == "pdf":
+            pdf_bytes = exporter.to_pdf(resume_id)
+            # Check if weasyprint returned PDF or HTML fallback
+            is_pdf = pdf_bytes[:4] == b"%PDF"
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf" if is_pdf else "text/html; charset=utf-8",
+                headers={"Content-Disposition": f'attachment; filename="resume_{resume_id}.{"pdf" if is_pdf else "html"}"'},
+            )
+        else:
+            docx_bytes = exporter.to_docx(resume_id)
+            return Response(
+                content=docx_bytes,
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                headers={"Content-Disposition": f'attachment; filename="resume_{resume_id}.docx"'},
+            )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-
-    return Response(
-        content=docx_bytes,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="resume_{resume_id}.docx"'},
-    )
 
 
 # ── Research Files ──

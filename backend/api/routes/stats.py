@@ -117,3 +117,75 @@ async def get_trends():
         "feedback_scores": feedback_scores,
         "resumes_by_month": resumes_by_month,
     }
+
+
+@router.get("/export/resumes")
+async def export_resumes_csv():
+    """Export resumes as CSV."""
+    import csv
+    import io
+    from fastapi.responses import Response
+
+    db = _get_db()
+    resumes = (
+        db.table("resumes")
+        .select("id, title, status, result, created_at, company_analyses(company_name)")
+        .order("created_at", desc=True)
+        .execute().data or []
+    )
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "제목", "기업명", "상태", "결과", "생성일"])
+    for r in resumes:
+        company = r.get("company_analyses", {}).get("company_name", "") if r.get("company_analyses") else ""
+        writer.writerow([
+            r["id"],
+            r.get("title", ""),
+            company,
+            r.get("status", ""),
+            r.get("result", ""),
+            r.get("created_at", "")[:10],
+        ])
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv; charset=utf-8-sig",
+        headers={"Content-Disposition": 'attachment; filename="resumes.csv"'},
+    )
+
+
+@router.get("/export/interviews")
+async def export_interviews_csv():
+    """Export mock interview sessions as CSV."""
+    import csv
+    import io
+    from fastapi.responses import Response
+
+    db = _get_db()
+    sessions = (
+        db.table("mock_sessions")
+        .select("id, mode, status, overall_score, evaluation, created_at")
+        .order("created_at", desc=True)
+        .execute().data or []
+    )
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "모드", "상태", "종합점수", "등급", "생성일"])
+    for s in sessions:
+        grade = s.get("evaluation", {}).get("grade", "-") if s.get("evaluation") else "-"
+        writer.writerow([
+            s["id"],
+            s.get("mode", ""),
+            s.get("status", ""),
+            s.get("overall_score", ""),
+            grade,
+            s.get("created_at", "")[:10],
+        ])
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv; charset=utf-8-sig",
+        headers={"Content-Disposition": 'attachment; filename="interviews.csv"'},
+    )

@@ -55,6 +55,9 @@ class ResumeGenerator:
             },
             ensure_ascii=False,
         )
+        # 5. Load research context if available
+        research_context = self._load_research(analysis.get("company_name", ""))
+
         variables = {
             "company_analysis": company_summary,
             "matched_entries": matched_text,
@@ -62,11 +65,29 @@ class ResumeGenerator:
             "tone": tone,
             "char_limit": str(char_limit) if char_limit else "없음",
             "emphasis": emphasis or "자동 선택",
+            "research_context": research_context or "",
         }
         messages = self._prompt.render("resume_gen", variables)
 
         # 4. Call Claude
         return await call_llm(messages, TaskType.resume_gen, stream=stream)
+
+    def _load_research(self, company_name: str) -> str | None:
+        """Load research files matching the company name."""
+        from pathlib import Path
+        research_dir = Path.home() / "Documents" / "career" / "research"
+        if not research_dir.exists() or not company_name:
+            return None
+
+        parts = []
+        for f in research_dir.glob("*.md"):
+            if company_name.lower() in f.name.lower():
+                try:
+                    content = f.read_text(encoding="utf-8")
+                    parts.append(f"## {f.name}\n{content[:2000]}")
+                except Exception:
+                    continue
+        return "\n\n".join(parts) if parts else None
 
     def _format_entries(self, entries: list[dict]) -> str:
         if not entries:

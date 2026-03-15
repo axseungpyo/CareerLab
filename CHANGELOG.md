@@ -28,7 +28,11 @@ CareerLab 버전별 변경사항 기록.
 - **추가** `/interview/compare`: 세션 비교 페이지 (5축 BarChart + 강점/약점 대조)
 - **추가** `/interview/weak-points`: 오답노트 페이지 (6점 이하 답변 수집, 모범답안, "다시 연습" 링크)
 
-### Phase 4: 데이터 활용 (예정)
+### Phase 4: 데이터 활용
+- **추가** PDF 내보내기: `GET /api/resume/{id}/export?format=pdf` (WeasyPrint 또는 HTML 폴백)
+- **추가** CSV 내보내기: `GET /api/stats/export/resumes`, `GET /api/stats/export/interviews`
+- **개선** 내보내기 포맷 선택: `?format=docx` (기본) 또는 `?format=pdf`
+- **추가** 리서치 파일 자동 연결: 자소서 생성 시 기업명 매칭 리서치 파일을 프롬프트 컨텍스트에 주입
 
 ---
 
