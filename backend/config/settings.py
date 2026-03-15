@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     # Search providers (env fallback)
     tavily_api_key: str = ""
     perplexity_api_key: str = ""
-    brave_api_key: str = ""
 
     # App
     app_env: str = "development"
@@ -40,15 +39,3 @@ def get_effective_supabase() -> tuple[str, str]:
     url = app.supabase.url or env.supabase_url
     key = app.supabase.service_role_key or env.supabase_service_role_key
     return url, key
-
-
-def get_effective_search_keys() -> dict[str, str]:
-    """Get effective search API keys (settings JSON → env)."""
-    from core.app_settings import load_app_settings
-    app = load_app_settings()
-    env = get_settings()
-    return {
-        "tavily": app.llm.search.tavily_api_key or env.tavily_api_key,
-        "perplexity": app.llm.search.perplexity_api_key or env.perplexity_api_key,
-        "brave": app.llm.search.brave_api_key or env.brave_api_key,
-    }

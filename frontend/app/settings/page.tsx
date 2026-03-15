@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Link2, ToggleLeft, Palette, Info, Sun, Moon, Monitor } from "lucide-react";
+import { Link2, ToggleLeft, Palette, Info, Sun, Moon, Monitor, Plus, Trash2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,18 +31,22 @@ interface ProviderConfig {
   has_key?: boolean;
 }
 
+interface TavilyKeyMasked {
+  alias: string;
+  api_key_masked: string;
+  has_key: boolean;
+  disabled: boolean;
+}
+
 interface SearchConfig {
   enabled: boolean;
   provider: string;
-  tavily_api_key: string;
+  tavily_keys: { alias: string; api_key: string; disabled: boolean }[];
+  tavily_keys_masked?: TavilyKeyMasked[];
+  tavily_keys_count?: number;
   perplexity_api_key: string;
-  brave_api_key: string;
-  tavily_api_key_masked?: string;
-  has_tavily_key?: boolean;
   perplexity_api_key_masked?: string;
   has_perplexity_key?: boolean;
-  brave_api_key_masked?: string;
-  has_brave_key?: boolean;
 }
 
 interface SettingsData {
@@ -75,6 +79,12 @@ interface ConnectionStatus {
   openai: ServiceStatus;
   supabase: ServiceStatus;
   search: ServiceStatus;
+}
+
+// New Tavily key entry being edited (not yet saved)
+interface NewTavilyKey {
+  alias: string;
+  api_key: string;
 }
 
 const STATUS_STYLES: Record<string, { dot: string; label: string }> = {
@@ -116,8 +126,8 @@ export default function SettingsPage() {
 
   const [claudeKey, setClaudeKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
-  const [tavilyKey, setTavilyKey] = useState("");
   const [perplexityKey, setPerplexityKey] = useState("");
+  const [newTavilyKeys, setNewTavilyKeys] = useState<NewTavilyKey[]>([]);
   const [supabaseUrl, setSupabaseUrl] = useState("");
   const [supabaseAnonKey, setSupabaseAnonKey] = useState("");
   const [supabaseServiceKey, setSupabaseServiceKey] = useState("");
@@ -142,10 +152,25 @@ export default function SettingsPage() {
     }
   }
 
+  async function refreshStatus() {
+    try {
+      const st = await api.get<ConnectionStatus>("/api/settings/status");
+      setStatus(st);
+      toast.success("연결 상태를 새로고침했습니다.");
+    } catch {
+      toast.error("상태 확인 실패");
+    }
+  }
+
   async function handleSave() {
     if (!settings) return;
     setSaving(true);
     try {
+      // Build tavily_keys: existing (kept from masked) + new entries
+      const tavilyKeysPayload = newTavilyKeys
+        .filter((k) => k.api_key)
+        .map((k) => ({ alias: k.alias || "키 " + (newTavilyKeys.indexOf(k) + 1), api_key: k.api_key, disabled: false }));
+
       const payload: Record<string, unknown> = {
         llm: {
           claude: {
@@ -163,7 +188,7 @@ export default function SettingsPage() {
           search: {
             enabled: settings.llm.search.enabled,
             provider: settings.llm.search.provider,
-            ...(tavilyKey ? { tavily_api_key: tavilyKey } : {}),
+            ...(tavilyKeysPayload.length > 0 ? { tavily_keys: tavilyKeysPayload } : {}),
             ...(perplexityKey ? { perplexity_api_key: perplexityKey } : {}),
           },
         },
@@ -178,8 +203,8 @@ export default function SettingsPage() {
       setSettings(updated);
       setClaudeKey("");
       setOpenaiKey("");
-      setTavilyKey("");
       setPerplexityKey("");
+      setNewTavilyKeys([]);
       setSupabaseAnonKey("");
       setSupabaseServiceKey("");
       setSupabaseUrl(updated.supabase.url_display || updated.supabase.url || "");
@@ -227,18 +252,27 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* Header — sticky save button */}
+      <div className="flex items-center justify-between sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-2 -mx-1 px-1">
         <h1 className="text-2xl font-bold">설정</h1>
-        {activeTab !== "theme" && activeTab !== "info" && (
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "저장 중..." : "설정 저장"}
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {activeTab === "connections" && (
+            <Button variant="outline" size="sm" onClick={refreshStatus}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />
+              연결 테스트
+            </Button>
+          )}
+          {activeTab !== "theme" && activeTab !== "info" && (
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "저장 중..." : "설정 저장"}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-6 min-h-[500px]">
-        {/* Sidebar */}
-        <nav className="w-48 shrink-0 space-y-1">
+        {/* Sidebar — hidden on mobile, show as horizontal tabs */}
+        <nav className="hidden md:block w-48 shrink-0 space-y-1">
           {SIDEBAR_ITEMS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -259,6 +293,23 @@ export default function SettingsPage() {
           ))}
         </nav>
 
+        {/* Mobile tab bar */}
+        <div className="md:hidden flex gap-1 fixed bottom-16 left-0 right-0 z-20 bg-background/90 backdrop-blur-sm border-t px-4 py-2">
+          {SIDEBAR_ITEMS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={cn(
+                "flex-1 flex flex-col items-center gap-0.5 py-1 rounded-lg text-[10px]",
+                activeTab === id ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Content */}
         <div className="flex-1 min-w-0">
           {activeTab === "connections" && (
@@ -269,10 +320,10 @@ export default function SettingsPage() {
               setClaudeKey={setClaudeKey}
               openaiKey={openaiKey}
               setOpenaiKey={setOpenaiKey}
-              tavilyKey={tavilyKey}
-              setTavilyKey={setTavilyKey}
               perplexityKey={perplexityKey}
               setPerplexityKey={setPerplexityKey}
+              newTavilyKeys={newTavilyKeys}
+              setNewTavilyKeys={setNewTavilyKeys}
               supabaseUrl={supabaseUrl}
               setSupabaseUrl={setSupabaseUrl}
               supabaseAnonKey={supabaseAnonKey}
@@ -298,7 +349,8 @@ export default function SettingsPage() {
 
 function ConnectionsTab({
   settings, status, claudeKey, setClaudeKey, openaiKey, setOpenaiKey,
-  tavilyKey, setTavilyKey, perplexityKey, setPerplexityKey,
+  perplexityKey, setPerplexityKey,
+  newTavilyKeys, setNewTavilyKeys,
   supabaseUrl, setSupabaseUrl,
   supabaseAnonKey, setSupabaseAnonKey, supabaseServiceKey, setSupabaseServiceKey,
   updateProvider, setSettings,
@@ -307,14 +359,30 @@ function ConnectionsTab({
   status: ConnectionStatus | null;
   claudeKey: string; setClaudeKey: (v: string) => void;
   openaiKey: string; setOpenaiKey: (v: string) => void;
-  tavilyKey: string; setTavilyKey: (v: string) => void;
   perplexityKey: string; setPerplexityKey: (v: string) => void;
+  newTavilyKeys: NewTavilyKey[]; setNewTavilyKeys: (v: NewTavilyKey[]) => void;
   supabaseUrl: string; setSupabaseUrl: (v: string) => void;
   supabaseAnonKey: string; setSupabaseAnonKey: (v: string) => void;
   supabaseServiceKey: string; setSupabaseServiceKey: (v: string) => void;
   updateProvider: (p: "claude" | "openai", f: string, v: string | boolean) => void;
   setSettings: React.Dispatch<React.SetStateAction<SettingsData | null>>;
 }) {
+  function addTavilyKey() {
+    setNewTavilyKeys([...newTavilyKeys, { alias: "", api_key: "" }]);
+  }
+
+  function updateNewTavilyKey(index: number, field: "alias" | "api_key", value: string) {
+    const updated = [...newTavilyKeys];
+    updated[index] = { ...updated[index], [field]: value };
+    setNewTavilyKeys(updated);
+  }
+
+  function removeNewTavilyKey(index: number) {
+    setNewTavilyKeys(newTavilyKeys.filter((_, i) => i !== index));
+  }
+
+  const maskedKeys = settings.llm.search.tavily_keys_masked || [];
+
   return (
     <div className="space-y-4">
       {/* Claude */}
@@ -508,7 +576,7 @@ function ConnectionsTab({
             />
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <div>
             <Label className="text-xs">검색 프로바이더</Label>
             <Select
@@ -525,58 +593,107 @@ function ConnectionsTab({
               <SelectContent>
                 <SelectItem value="tavily">Tavily (AI 검색)</SelectItem>
                 <SelectItem value="perplexity">Perplexity Sonar (검색+요약)</SelectItem>
-                <SelectItem value="brave">Brave Search (레거시)</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {settings.llm.search.provider === "tavily" && (
-              <div className="col-span-2">
+
+          {/* Tavily Multi-Key Manager */}
+          {settings.llm.search.provider === "tavily" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
                 <Label className="text-xs">
-                  Tavily API Key
-                  {settings.llm.search.has_tavily_key && (
-                    <span className="ml-1 text-green-600 dark:text-green-400 text-[10px]">설정됨</span>
+                  Tavily API Keys
+                  {(settings.llm.search.tavily_keys_count ?? 0) > 0 && (
+                    <span className="ml-1 text-green-600 dark:text-green-400 text-[10px]">
+                      {settings.llm.search.tavily_keys_count}개 활성
+                    </span>
                   )}
                 </Label>
-                <Input
-                  type="password"
-                  value={tavilyKey}
-                  onChange={(e) => setTavilyKey(e.target.value)}
-                  placeholder={settings.llm.search.has_tavily_key ? "변경 시 입력" : "tvly-..."}
-                  className="font-mono text-xs"
-                />
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={addTavilyKey}>
+                  <Plus className="h-3 w-3 mr-1" />
+                  키 추가
+                </Button>
               </div>
-            )}
-            {settings.llm.search.provider === "perplexity" && (
-              <div className="col-span-2">
-                <Label className="text-xs">
-                  Perplexity API Key
-                  {settings.llm.search.has_perplexity_key && (
-                    <span className="ml-1 text-green-600 dark:text-green-400 text-[10px]">설정됨</span>
-                  )}
-                </Label>
-                <Input
-                  type="password"
-                  value={perplexityKey}
-                  onChange={(e) => setPerplexityKey(e.target.value)}
-                  placeholder={settings.llm.search.has_perplexity_key ? "변경 시 입력" : "pplx-..."}
-                  className="font-mono text-xs"
-                />
-              </div>
-            )}
-            {settings.llm.search.provider === "brave" && (
-              <div className="col-span-2">
-                <p className="text-xs text-muted-foreground py-2">
-                  Brave Search는 레거시 지원입니다. Tavily 또는 Perplexity Sonar로 전환을 권장합니다.
-                  기존 BRAVE_API_KEY는 환경변수(.env)에서 읽습니다.
-                </p>
-              </div>
-            )}
-          </div>
+              <p className="text-[11px] text-muted-foreground">
+                여러 API Key를 등록하면 사용 한도 초과 시 자동으로 다음 키로 전환됩니다.
+              </p>
+
+              {/* Existing keys (masked) */}
+              {maskedKeys.length > 0 && (
+                <div className="space-y-1.5">
+                  {maskedKeys.map((k, i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-lg border text-xs",
+                        k.disabled ? "opacity-50" : ""
+                      )}
+                    >
+                      <Badge variant="secondary" className="text-[10px] shrink-0">
+                        {k.alias || `키 ${i + 1}`}
+                      </Badge>
+                      <span className="font-mono text-muted-foreground flex-1 truncate">
+                        {k.api_key_masked}
+                      </span>
+                      {k.has_key && !k.disabled && (
+                        <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* New keys being added */}
+              {newTavilyKeys.map((nk, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Input
+                    value={nk.alias}
+                    onChange={(e) => updateNewTavilyKey(i, "alias", e.target.value)}
+                    placeholder="별칭 (예: 개인, 회사)"
+                    className="w-28 text-xs"
+                  />
+                  <Input
+                    type="password"
+                    value={nk.api_key}
+                    onChange={(e) => updateNewTavilyKey(i, "api_key", e.target.value)}
+                    placeholder="tvly-..."
+                    className="flex-1 font-mono text-xs"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 shrink-0"
+                    onClick={() => removeNewTavilyKey(i)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Perplexity Key */}
+          {settings.llm.search.provider === "perplexity" && (
+            <div>
+              <Label className="text-xs">
+                Perplexity API Key
+                {settings.llm.search.has_perplexity_key && (
+                  <span className="ml-1 text-green-600 dark:text-green-400 text-[10px]">설정됨</span>
+                )}
+              </Label>
+              <Input
+                type="password"
+                value={perplexityKey}
+                onChange={(e) => setPerplexityKey(e.target.value)}
+                placeholder={settings.llm.search.has_perplexity_key ? "변경 시 입력" : "pplx-..."}
+                className="font-mono text-xs"
+              />
+            </div>
+          )}
+
           <p className="text-[11px] text-muted-foreground">
-            {settings.llm.search.provider === "tavily" && "AI 에이전트/RAG에 최적화된 구조화 검색 결과 반환."}
+            {settings.llm.search.provider === "tavily" && "AI 에이전트/RAG에 최적화된 구조화 검색 결과 반환. 한도 초과 시 자동 키 전환."}
             {settings.llm.search.provider === "perplexity" && "검색 + LLM 요약을 한 번에 수행. 출처 포함."}
-            {settings.llm.search.provider === "brave" && "독립 인덱스 기반 프라이버시 중심 검색."}
           </p>
         </CardContent>
       </Card>
@@ -649,7 +766,6 @@ function ThemeTab() {
         ))}
       </div>
 
-      {/* Color preview */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">색상 미리보기</CardTitle>
@@ -678,7 +794,7 @@ function InfoTab({ status }: { status: ConnectionStatus | null }) {
         <CardContent className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">버전</span>
-            <span>0.1.0</span>
+            <span>0.4.0</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">프레임워크</span>

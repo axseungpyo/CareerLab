@@ -27,12 +27,21 @@ def _masked_settings(s: AppSettings) -> dict:
     data["llm"]["claude"]["has_key"] = bool(s.llm.claude.api_key)
     data["llm"]["openai"]["api_key_masked"] = _mask_key(s.llm.openai.api_key)
     data["llm"]["openai"]["has_key"] = bool(s.llm.openai.api_key)
-    data["llm"]["search"]["tavily_api_key_masked"] = _mask_key(s.llm.search.tavily_api_key)
-    data["llm"]["search"]["has_tavily_key"] = bool(s.llm.search.tavily_api_key)
+    # Tavily multi-key: mask each key
+    masked_tavily_keys = []
+    for entry in s.llm.search.tavily_keys:
+        masked_tavily_keys.append({
+            "alias": entry.alias,
+            "api_key_masked": _mask_key(entry.api_key),
+            "has_key": bool(entry.api_key),
+            "disabled": entry.disabled,
+        })
+    data["llm"]["search"]["tavily_keys_masked"] = masked_tavily_keys
+    data["llm"]["search"]["tavily_keys_count"] = len([k for k in s.llm.search.tavily_keys if k.api_key and not k.disabled])
+    # Clear raw tavily keys from response
+    data["llm"]["search"]["tavily_keys"] = []
     data["llm"]["search"]["perplexity_api_key_masked"] = _mask_key(s.llm.search.perplexity_api_key)
     data["llm"]["search"]["has_perplexity_key"] = bool(s.llm.search.perplexity_api_key)
-    data["llm"]["search"]["brave_api_key_masked"] = _mask_key(s.llm.search.brave_api_key)
-    data["llm"]["search"]["has_brave_key"] = bool(s.llm.search.brave_api_key)
     data["supabase"]["has_url"] = bool(s.supabase.url)
     data["supabase"]["has_anon_key"] = bool(s.supabase.anon_key)
     data["supabase"]["has_service_key"] = bool(s.supabase.service_role_key)
@@ -42,9 +51,7 @@ def _masked_settings(s: AppSettings) -> dict:
     # Remove raw keys from response
     data["llm"]["claude"]["api_key"] = ""
     data["llm"]["openai"]["api_key"] = ""
-    data["llm"]["search"]["tavily_api_key"] = ""
     data["llm"]["search"]["perplexity_api_key"] = ""
-    data["llm"]["search"]["brave_api_key"] = ""
     data["supabase"]["anon_key"] = ""
     data["supabase"]["service_role_key"] = ""
     return data
@@ -86,12 +93,11 @@ async def put_settings(req: SettingsUpdateRequest):
                 llm["openai"]["api_key"] = current.llm.openai.api_key
         if "search" in llm:
             search = llm["search"]
-            if "tavily_api_key" not in search:
-                search["tavily_api_key"] = current.llm.search.tavily_api_key
+            # tavily_keys: if provided, replace entirely; if not, keep current
+            if "tavily_keys" not in search:
+                search["tavily_keys"] = [k.model_dump() for k in current.llm.search.tavily_keys]
             if "perplexity_api_key" not in search:
                 search["perplexity_api_key"] = current.llm.search.perplexity_api_key
-            if "brave_api_key" not in search:
-                search["brave_api_key"] = current.llm.search.brave_api_key
 
     if "supabase" in update_data:
         sb = update_data["supabase"]
@@ -145,27 +151,30 @@ async def connection_status():
 
     # Search
     search = app.llm.search
-    provider_labels = {"tavily": "Tavily", "perplexity": "Perplexity Sonar", "brave": "Brave Search"}
+    provider_labels = {"tavily": "Tavily", "perplexity": "Perplexity Sonar"}
     provider_label = provider_labels.get(search.provider, search.provider)
 
     search_st = {"status": "disabled", "message": "웹 검색이 비활성화되어 있습니다."}
     if search.enabled:
-        key_map = {
-            "tavily": search.tavily_api_key or env.tavily_api_key,
-            "perplexity": search.perplexity_api_key or env.perplexity_api_key,
-            "brave": search.brave_api_key or env.brave_api_key,
-        }
-        active_key = key_map.get(search.provider, "")
-        if active_key:
-            search_st = {
-                "status": "valid",
-                "message": f"{provider_label} 연결됨 (API Key 설정됨)",
-            }
-        else:
-            search_st = {
-                "status": "missing",
-                "message": f"{provider_label} API Key가 없습니다.",
-            }
+        if search.provider == "tavily":
+            active_keys = [k for k in search.tavily_keys if k.api_key and not k.disabled]
+            if active_keys:
+                search_st = {
+                    "status": "valid",
+                    "message": f"Tavily 연결됨 ({len(active_keys)}개 키 활성)",
+                }
+            else:
+                env_key = env.tavily_api_key
+                if env_key:
+                    search_st = {"status": "valid", "message": "Tavily 연결됨 (.env 키 사용)"}
+                else:
+                    search_st = {"status": "missing", "message": "Tavily API Key가 없습니다."}
+        elif search.provider == "perplexity":
+            active_key = search.perplexity_api_key or env.perplexity_api_key
+            if active_key:
+                search_st = {"status": "valid", "message": "Perplexity Sonar 연결됨"}
+            else:
+                search_st = {"status": "missing", "message": "Perplexity API Key가 없습니다."}
 
     return {
         "claude": claude_st,

@@ -27,16 +27,23 @@ class SupabaseSettings(BaseModel):
     service_role_key: str = ""
 
 
+class TavilyKeyEntry(BaseModel):
+    """A single Tavily API key with alias."""
+    alias: str = ""
+    api_key: str = ""
+    disabled: bool = False
+
+
 class SearchSettings(BaseModel):
     """Web search provider configuration.
 
-    provider: "tavily" | "perplexity" | "brave"
+    provider: "tavily" | "perplexity"
+    tavily_keys: list of {alias, api_key} — auto-rotates on rate limit
     """
     enabled: bool = True
     provider: str = "tavily"
-    tavily_api_key: str = ""
+    tavily_keys: list[TavilyKeyEntry] = []
     perplexity_api_key: str = ""
-    brave_api_key: str = ""
 
 
 class LLMSettings(BaseModel):
@@ -79,6 +86,16 @@ def load_app_settings() -> AppSettings:
     if SETTINGS_FILE.exists():
         try:
             data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+            # Migrate old single tavily_api_key to tavily_keys list
+            search = data.get("llm", {}).get("search", {})
+            if "tavily_api_key" in search and "tavily_keys" not in search:
+                old_key = search.pop("tavily_api_key")
+                if old_key:
+                    search["tavily_keys"] = [{"alias": "기본", "api_key": old_key}]
+            # Remove brave references
+            search.pop("brave_api_key", None)
+            if search.get("provider") == "brave":
+                search["provider"] = "tavily"
             return AppSettings.model_validate(data)
         except Exception:
             pass
