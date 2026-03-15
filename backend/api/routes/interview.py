@@ -76,6 +76,13 @@ async def end_mock(session_id: str):
     return mgr.end_session(session_id)
 
 
+@router.get("/mock/sessions/{resume_id}")
+async def list_sessions(resume_id: str):
+    """Get all mock sessions for a resume (for session comparison)."""
+    mgr = MockInterviewManager()
+    return mgr.get_sessions_for_resume(resume_id)
+
+
 @router.get("/mock/{session_id}", response_model=MockSessionResponse)
 async def get_session(session_id: str):
     mgr = MockInterviewManager()

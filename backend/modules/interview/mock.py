@@ -146,3 +146,14 @@ class MockInterviewManager:
             .execute()
         )
         return result.data
+
+    def get_sessions_for_resume(self, resume_id: str) -> list[dict]:
+        """Get all mock sessions for a resume, ordered by date."""
+        result = (
+            self._db.table("mock_sessions")
+            .select("id, resume_id, mode, status, overall_score, evaluation, created_at")
+            .eq("resume_id", resume_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return result.data
