@@ -137,3 +137,15 @@ class ResumeGenerator:
             .execute()
         )
         return result.data
+
+    def get_item_versions(self, resume_id: str, question: str) -> list[dict]:
+        """Get all versions of a resume item with the same question."""
+        result = (
+            self._db.table("resume_items")
+            .select("*")
+            .eq("resume_id", resume_id)
+            .eq("question", question)
+            .order("version")
+            .execute()
+        )
+        return result.data

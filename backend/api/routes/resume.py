@@ -133,6 +133,13 @@ async def update_item(item_id: str, data: ResumeItemUpdate):
     return gen.update_resume_item(item_id, data.model_dump(exclude_none=True))
 
 
+@router.get("/{resume_id}/items/versions")
+async def list_item_versions(resume_id: str, question: str):
+    """Get all versions of a resume item with the same question."""
+    gen = ResumeGenerator()
+    return gen.get_item_versions(resume_id, question)
+
+
 # ── Export ──
 
 @router.get("/{resume_id}/export")

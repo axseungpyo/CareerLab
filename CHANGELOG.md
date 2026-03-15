@@ -4,6 +4,39 @@ CareerLab 버전별 변경사항 기록.
 
 ---
 
+## v0.4.0 — 사용자 경험 강화 (2026-03-16, 진행 중)
+
+### Phase 1: 대시보드 강화
+- **추가** `backend/api/routes/stats.py`: `GET /api/stats/summary` (자소서/합격률/면접/첨삭 통계)
+- **추가** `GET /api/stats/trends`: 면접 점수 추이, 첨삭 4축 추이, 월별 자소서 수
+- **개선** 홈 대시보드: StatCard 4종 (자소서/합격률/모의면접/첨삭평균)
+- **개선** 면접 점수 추이 LineChart + 첨삭 4축 BarChart (recharts)
+- **개선** 첨삭 4축 평균 게이지 바
+
+### Phase 2: 자소서 품질 개선 루프
+- **추가** `GET /api/resume/{id}/items/versions?question=`: 동일 질문 버전 목록 API
+- **추가** `POST /api/interview/review/apply-selective/{report_id}`: 선택적 수정안 적용 API
+- **추가** `GET /api/interview/review/reports/{resume_item_id}`: 항목별 첨삭 리포트 목록
+- **개선** 자소서 상세 페이지: 버전 이력 패널 (버전 목록 + 복원 기능)
+- **개선** 첨삭 페이지: 원문/수정본 사이드바이사이드 비교 뷰 (diff toggle)
+- **개선** 첨삭 페이지: 제안별 체크박스 선택 + "선택 적용" 버튼
+
+### Phase 3: 면접 훈련 강화 (예정)
+### Phase 4: 데이터 활용 (예정)
+
+---
+
+## v0.3.1 — 검색 프로바이더 + 문서/스킬 (2026-03-16)
+
+### 추가
+- **웹 검색 멀티 프로바이더**: Brave → Tavily/Perplexity Sonar/Brave 3종 지원
+- **SearchSettings 모델**: provider 선택 + 프로바이더별 API key
+- **Settings UI**: 웹 검색 카드 (프로바이더 드롭다운 + 키 입력)
+- **Custom Skills 10종**: batch-resume, mock-drill, bulk-review, interview-prep, resume-compare, prompt-audit, prompt-test, api-healthcheck, prompt-evolve, db-inspect
+- **문서**: automation-plan.md, feature-backlog.md, v0.4.0 Plan 문서
+
+---
+
 ## v0.3.0 — UI/UX 리디자인 (2026-03-15)
 
 ### 추가

@@ -79,13 +79,51 @@ class FeedbackEngine:
             raise ValueError("수정본이 없는 리포트입니다.")
 
         item_id = report["resume_item_id"]
-        # Get current version
         item = self._db.table("resume_items").select("version").eq("id", item_id).execute()
         current_version = item.data[0]["version"] if item.data else 1
 
         result = (
             self._db.table("resume_items")
             .update({"answer": report["revised_text"], "version": current_version + 1})
+            .eq("id", item_id)
+            .execute()
+        )
+        return result.data[0]
+
+    async def apply_selective(self, report_id: str, indices: list[int]) -> dict:
+        """Apply only selected suggestions from feedback to the resume item."""
+        report = self.get_report(report_id)
+        if not report:
+            raise ValueError("리포트를 찾을 수 없습니다.")
+
+        suggestions = report.get("suggestions", [])
+        if not suggestions:
+            raise ValueError("수정 제안이 없는 리포트입니다.")
+
+        item_id = report["resume_item_id"]
+        item_row = self._db.table("resume_items").select("answer, version").eq("id", item_id).execute()
+        if not item_row.data:
+            raise ValueError("자소서 항목을 찾을 수 없습니다.")
+
+        current_answer = item_row.data[0]["answer"]
+        current_version = item_row.data[0]["version"]
+
+        # Apply selected suggestions by replacing original → revised
+        modified = current_answer
+        for idx in sorted(indices):
+            if 0 <= idx < len(suggestions):
+                s = suggestions[idx]
+                original = s.get("original", "")
+                revised = s.get("revised", "")
+                if original and revised and original in modified:
+                    modified = modified.replace(original, revised, 1)
+
+        if modified == current_answer:
+            raise ValueError("선택된 제안이 원문에 적용되지 않았습니다.")
+
+        result = (
+            self._db.table("resume_items")
+            .update({"answer": modified, "version": current_version + 1})
             .eq("id", item_id)
             .execute()
         )

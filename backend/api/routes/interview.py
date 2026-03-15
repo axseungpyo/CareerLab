@@ -129,3 +129,24 @@ async def apply_review(report_id: str):
         return await engine.apply_suggestion(report_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+class SelectiveApplyRequest(BaseModel):
+    indices: list[int]
+
+
+@router.post("/review/apply-selective/{report_id}")
+async def apply_review_selective(report_id: str, req: SelectiveApplyRequest):
+    """Apply only selected suggestions from a feedback report."""
+    engine = FeedbackEngine()
+    try:
+        return await engine.apply_selective(report_id, req.indices)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/review/reports/{resume_item_id}")
+async def get_item_reports(resume_item_id: str):
+    """Get all feedback reports for a resume item."""
+    engine = FeedbackEngine()
+    return engine.get_reports_for_item(resume_item_id)

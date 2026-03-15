@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { History, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,8 @@ export default function ResumeDetailPage() {
   const [editing, setEditing] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [versionPanel, setVersionPanel] = useState<string | null>(null);
+  const [versions, setVersions] = useState<ResumeItem[]>([]);
 
   const resumeId = params.id as string;
 
@@ -68,11 +71,40 @@ export default function ResumeDetailPage() {
     loadResume();
   }
 
-  async function handleExport() {
+  async function handleExport(format: string = "docx") {
     window.open(
-      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/resume/${resumeId}/export`,
+      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/resume/${resumeId}/export?format=${format}`,
       "_blank"
     );
+  }
+
+  async function loadVersions(item: ResumeItem) {
+    if (versionPanel === item.id) {
+      setVersionPanel(null);
+      return;
+    }
+    try {
+      const v = await api.get<ResumeItem[]>(
+        `/api/resume/${resumeId}/items/versions?question=${encodeURIComponent(item.question)}`
+      );
+      setVersions(v);
+      setVersionPanel(item.id);
+    } catch {
+      toast.error("버전 목록을 불러올 수 없습니다.");
+    }
+  }
+
+  async function handleRestoreVersion(versionItem: ResumeItem, currentItemId: string) {
+    try {
+      await api.put(`/api/resume/items/${currentItemId}`, {
+        answer: versionItem.answer,
+      });
+      toast.success(`v${versionItem.version} 버전으로 복원되었습니다.`);
+      setVersionPanel(null);
+      loadResume();
+    } catch {
+      toast.error("복원에 실패했습니다.");
+    }
   }
 
   if (loading) {
@@ -105,16 +137,12 @@ export default function ResumeDetailPage() {
               <SelectItem value="submitted">제출</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" onClick={() => handleExport("docx")}>
             DOCX 내보내기
           </Button>
           <Button
             variant="outline"
-            onClick={() =>
-              router.push(
-                `/review?resume_id=${resumeId}`
-              )
-            }
+            onClick={() => router.push(`/review?resume_id=${resumeId}`)}
           >
             첨삭 분석
           </Button>
@@ -143,11 +171,57 @@ export default function ResumeDetailPage() {
                       {item.answer.length}/{item.char_limit}자
                     </Badge>
                   )}
-                  <Badge variant="secondary">v{item.version}</Badge>
+                  <button
+                    onClick={() => loadVersions(item)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <History className="h-3 w-3" />
+                    v{item.version}
+                    <ChevronDown className={`h-3 w-3 transition-transform ${versionPanel === item.id ? "rotate-180" : ""}`} />
+                  </button>
                 </div>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              {/* Version History Panel */}
+              {versionPanel === item.id && versions.length > 0 && (
+                <div className="border rounded-lg p-3 bg-muted/30 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    버전 이력 ({versions.length}개)
+                  </p>
+                  {versions.map((v) => (
+                    <div
+                      key={v.id}
+                      className={`flex items-center justify-between p-2 rounded text-xs ${
+                        v.id === item.id
+                          ? "bg-primary/10 border border-primary/20"
+                          : "hover:bg-muted/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Badge variant={v.id === item.id ? "default" : "secondary"} className="text-[10px] shrink-0">
+                          v{v.version}
+                        </Badge>
+                        <span className="truncate text-muted-foreground">
+                          {v.answer.slice(0, 60)}...
+                        </span>
+                      </div>
+                      {v.id !== item.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-[10px] h-6 shrink-0"
+                          onClick={() => handleRestoreVersion(v, item.id)}
+                        >
+                          복원
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Edit / View */}
               {editing === item.id ? (
                 <div className="space-y-2">
                   <Textarea
@@ -156,17 +230,10 @@ export default function ResumeDetailPage() {
                     rows={8}
                   />
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveItem(item.id)}
-                    >
+                    <Button size="sm" onClick={() => handleSaveItem(item.id)}>
                       저장
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditing(null)}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => setEditing(null)}>
                       취소
                     </Button>
                   </div>
