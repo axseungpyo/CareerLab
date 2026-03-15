@@ -18,8 +18,8 @@ export default function FileUpload({ onParsed }: FileUploadProps) {
   const handleFile = useCallback(
     async (file: File) => {
       const ext = file.name.split(".").pop()?.toLowerCase();
-      if (ext !== "pdf" && ext !== "docx") {
-        setError("PDF 또는 DOCX 파일만 지원합니다.");
+      if (!ext || !["pdf", "docx", "txt", "md"].includes(ext)) {
+        setError("PDF, DOCX, TXT, MD 파일만 지원합니다.");
         return;
       }
       setLoading(true);
@@ -64,7 +64,7 @@ export default function FileUpload({ onParsed }: FileUploadProps) {
           <p className="text-sm font-medium">
             {loading ? "AI가 이력서를 분석하고 있습니다..." : "이력서 파일을 드래그하거나 클릭하여 업로드"}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">PDF, DOCX 지원</p>
+          <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, TXT, MD 지원</p>
         </div>
         <Button
           variant="outline"
@@ -73,7 +73,7 @@ export default function FileUpload({ onParsed }: FileUploadProps) {
           onClick={() => {
             const input = document.createElement("input");
             input.type = "file";
-            input.accept = ".pdf,.docx";
+            input.accept = ".pdf,.docx,.txt,.md";
             input.onchange = (e) => {
               const file = (e.target as HTMLInputElement).files?.[0];
               if (file) handleFile(file);

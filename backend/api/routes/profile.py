@@ -120,12 +120,7 @@ async def list_notion_pages(query: str = ""):
     try:
         return await connector.list_pages(query)
     except Exception as e:
-        error_msg = str(e)
-        if "401" in error_msg:
-            raise HTTPException(status_code=400, detail="Notion API Key가 유효하지 않습니다.")
-        if "403" in error_msg:
-            raise HTTPException(status_code=400, detail="페이지에 Integration을 연결(Connection)하세요.")
-        raise HTTPException(status_code=500, detail=f"Notion API 오류: {error_msg}")
+        _raise_notion_error(e)
 
 
 class NotionImportRequest(BaseModel):
@@ -150,9 +145,19 @@ async def import_notion_page(req: NotionImportRequest):
     try:
         return await connector.parse(req.page_id)
     except Exception as e:
-        error_msg = str(e)
-        if "401" in error_msg:
-            raise HTTPException(status_code=400, detail="Notion API Key가 유효하지 않습니다.")
-        if "404" in error_msg:
-            raise HTTPException(status_code=404, detail="Notion 페이지를 찾을 수 없습니다.")
-        raise HTTPException(status_code=500, detail=f"Notion 가져오기 실패: {error_msg}")
+        _raise_notion_error(e)
+
+
+def _raise_notion_error(e: Exception) -> None:
+    """Convert Notion API errors to appropriate HTTP exceptions."""
+    import httpx
+    error_msg = str(e)
+    if isinstance(e, httpx.TimeoutException):
+        raise HTTPException(status_code=408, detail="Notion 서버 응답 시간 초과. 잠시 후 다시 시도하세요.")
+    if "401" in error_msg:
+        raise HTTPException(status_code=400, detail="Notion API Key가 유효하지 않습니다.")
+    if "403" in error_msg:
+        raise HTTPException(status_code=400, detail="페이지에 Integration을 연결(Connection)하세요.")
+    if "404" in error_msg:
+        raise HTTPException(status_code=404, detail="Notion 페이지를 찾을 수 없습니다.")
+    raise HTTPException(status_code=500, detail=f"Notion API 오류: {error_msg}")

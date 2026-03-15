@@ -1,16 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
+import { Search, ExternalLink, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import ProfileForm from "@/components/profile/profile-form";
 import CareerEntryForm from "@/components/profile/career-entry-form";
 import FileUpload from "@/components/profile/file-upload";
+import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import type { Profile, CareerEntry } from "@/lib/types";
+
+interface NotionPage {
+  id: string;
+  title: string;
+  url: string;
+  icon: string | null;
+  last_edited: string;
+}
+
+interface SettingsLlm {
+  notion: { enabled: boolean; has_key?: boolean };
+}
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -18,8 +34,17 @@ export default function ProfilePage() {
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Notion state
+  const [notionEnabled, setNotionEnabled] = useState(false);
+  const [notionQuery, setNotionQuery] = useState("");
+  const [notionPages, setNotionPages] = useState<NotionPage[]>([]);
+  const [notionSearching, setNotionSearching] = useState(false);
+  const [notionImporting, setNotionImporting] = useState(false);
+  const [selectedNotionPage, setSelectedNotionPage] = useState<string | null>(null);
+
   useEffect(() => {
     loadProfile();
+    checkNotionStatus();
   }, []);
 
   async function loadProfile() {
@@ -36,6 +61,15 @@ export default function ProfilePage() {
       // no profile yet
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function checkNotionStatus() {
+    try {
+      const s = await api.get<{ llm: SettingsLlm }>("/api/settings");
+      setNotionEnabled(s.llm.notion.enabled && !!s.llm.notion.has_key);
+    } catch {
+      // settings unavailable
     }
   }
 
@@ -74,12 +108,51 @@ export default function ProfilePage() {
 
   function handleFileParsed(data: Record<string, unknown>) {
     toast.success("이력서가 파싱되었습니다. 데이터를 확인하세요.");
-    // Auto-fill profile form with parsed data
     if (data.profile) {
       const p = data.profile as Record<string, unknown>;
-      // User can review in console, then manually apply
       console.log("Parsed profile:", p);
       console.log("Parsed entries:", data.career_entries);
+    }
+  }
+
+  async function handleNotionSearch() {
+    setNotionSearching(true);
+    setNotionPages([]);
+    setSelectedNotionPage(null);
+    try {
+      const pages = await api.get<NotionPage[]>(
+        `/api/profile/import/notion/pages?query=${encodeURIComponent(notionQuery)}`
+      );
+      setNotionPages(pages);
+      if (pages.length === 0) {
+        toast.info("검색 결과가 없습니다.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Notion 검색 실패");
+    } finally {
+      setNotionSearching(false);
+    }
+  }
+
+  async function handleNotionImport() {
+    if (!selectedNotionPage) return;
+    setNotionImporting(true);
+    try {
+      const result = await api.post<Record<string, unknown>>(
+        "/api/profile/import/notion",
+        { page_id: selectedNotionPage }
+      );
+      toast.success("Notion 페이지를 가져왔습니다. 데이터를 확인하세요.");
+      if (result.profile) {
+        console.log("Notion parsed profile:", result.profile);
+        console.log("Notion parsed entries:", result.career_entries);
+      }
+      setSelectedNotionPage(null);
+      setNotionPages([]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Notion 가져오기 실패");
+    } finally {
+      setNotionImporting(false);
     }
   }
 
@@ -95,6 +168,107 @@ export default function ProfilePage() {
 
       {/* File Upload */}
       <FileUpload onParsed={handleFileParsed} />
+
+      {/* Notion Import */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Notion에서 가져오기
+            </div>
+            {notionEnabled ? (
+              <Badge variant="secondary" className="text-[10px]">연결됨</Badge>
+            ) : (
+              <Link href="/settings">
+                <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-accent">
+                  설정 필요
+                </Badge>
+              </Link>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {notionEnabled ? (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  value={notionQuery}
+                  onChange={(e) => setNotionQuery(e.target.value)}
+                  placeholder="페이지 제목으로 검색 (예: 이력서, 경력)"
+                  className="text-sm"
+                  onKeyDown={(e) => e.key === "Enter" && handleNotionSearch()}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNotionSearch}
+                  disabled={notionSearching}
+                >
+                  <Search className="h-3.5 w-3.5 mr-1" />
+                  {notionSearching ? "검색 중..." : "검색"}
+                </Button>
+              </div>
+
+              {notionPages.length > 0 && (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {notionPages.map((page) => (
+                    <button
+                      key={page.id}
+                      onClick={() => setSelectedNotionPage(
+                        selectedNotionPage === page.id ? null : page.id
+                      )}
+                      className={cn(
+                        "w-full flex items-center gap-2 p-2 rounded-lg text-left text-sm transition-colors",
+                        selectedNotionPage === page.id
+                          ? "bg-primary/10 border border-primary/20"
+                          : "hover:bg-muted/50"
+                      )}
+                    >
+                      <span className="text-base shrink-0">{page.icon || "📄"}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{page.title}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {new Date(page.last_edited).toLocaleDateString("ko-KR")}
+                        </p>
+                      </div>
+                      {page.url && (
+                        <a
+                          href={page.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="shrink-0"
+                        >
+                          <ExternalLink className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                        </a>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {selectedNotionPage && (
+                <Button
+                  size="sm"
+                  onClick={handleNotionImport}
+                  disabled={notionImporting}
+                  className="w-full"
+                >
+                  {notionImporting ? "가져오는 중..." : "선택한 페이지 가져오기"}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              <Link href="/settings" className="text-primary hover:underline">
+                Settings
+              </Link>
+              에서 Notion API Key를 설정하면 Notion 페이지에서 경력 데이터를 가져올 수 있습니다.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Separator />
 
