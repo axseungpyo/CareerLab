@@ -27,8 +27,12 @@ def _masked_settings(s: AppSettings) -> dict:
     data["llm"]["claude"]["has_key"] = bool(s.llm.claude.api_key)
     data["llm"]["openai"]["api_key_masked"] = _mask_key(s.llm.openai.api_key)
     data["llm"]["openai"]["has_key"] = bool(s.llm.openai.api_key)
-    data["llm"]["brave_api_key_masked"] = _mask_key(s.llm.brave_api_key)
-    data["llm"]["has_brave_key"] = bool(s.llm.brave_api_key)
+    data["llm"]["search"]["tavily_api_key_masked"] = _mask_key(s.llm.search.tavily_api_key)
+    data["llm"]["search"]["has_tavily_key"] = bool(s.llm.search.tavily_api_key)
+    data["llm"]["search"]["perplexity_api_key_masked"] = _mask_key(s.llm.search.perplexity_api_key)
+    data["llm"]["search"]["has_perplexity_key"] = bool(s.llm.search.perplexity_api_key)
+    data["llm"]["search"]["brave_api_key_masked"] = _mask_key(s.llm.search.brave_api_key)
+    data["llm"]["search"]["has_brave_key"] = bool(s.llm.search.brave_api_key)
     data["supabase"]["has_url"] = bool(s.supabase.url)
     data["supabase"]["has_anon_key"] = bool(s.supabase.anon_key)
     data["supabase"]["has_service_key"] = bool(s.supabase.service_role_key)
@@ -38,7 +42,9 @@ def _masked_settings(s: AppSettings) -> dict:
     # Remove raw keys from response
     data["llm"]["claude"]["api_key"] = ""
     data["llm"]["openai"]["api_key"] = ""
-    data["llm"]["brave_api_key"] = ""
+    data["llm"]["search"]["tavily_api_key"] = ""
+    data["llm"]["search"]["perplexity_api_key"] = ""
+    data["llm"]["search"]["brave_api_key"] = ""
     data["supabase"]["anon_key"] = ""
     data["supabase"]["service_role_key"] = ""
     return data
@@ -78,8 +84,14 @@ async def put_settings(req: SettingsUpdateRequest):
                 pass
             elif "api_key" not in llm["openai"]:
                 llm["openai"]["api_key"] = current.llm.openai.api_key
-        if "brave_api_key" not in llm:
-            llm["brave_api_key"] = current.llm.brave_api_key
+        if "search" in llm:
+            search = llm["search"]
+            if "tavily_api_key" not in search:
+                search["tavily_api_key"] = current.llm.search.tavily_api_key
+            if "perplexity_api_key" not in search:
+                search["perplexity_api_key"] = current.llm.search.perplexity_api_key
+            if "brave_api_key" not in search:
+                search["brave_api_key"] = current.llm.search.brave_api_key
 
     if "supabase" in update_data:
         sb = update_data["supabase"]
@@ -102,7 +114,7 @@ class StatusResponse(BaseModel):
     claude: dict
     openai: dict
     supabase: dict
-    brave: dict
+    search: dict
 
 
 @router.get("/status")
@@ -131,20 +143,35 @@ async def connection_status():
     elif url:
         supabase_st = {"status": "partial", "message": "URL은 있지만 Service Role Key가 없습니다."}
 
-    # Brave
-    brave_key = app.llm.brave_api_key or env.brave_api_key
-    brave_st = {"status": "disabled", "message": "Brave Search가 비활성화되어 있습니다."}
-    if app.llm.brave_search_enabled:
-        if brave_key:
-            brave_st = {"status": "valid", "message": "API Key가 설정되어 있습니다."}
+    # Search
+    search = app.llm.search
+    provider_labels = {"tavily": "Tavily", "perplexity": "Perplexity Sonar", "brave": "Brave Search"}
+    provider_label = provider_labels.get(search.provider, search.provider)
+
+    search_st = {"status": "disabled", "message": "웹 검색이 비활성화되어 있습니다."}
+    if search.enabled:
+        key_map = {
+            "tavily": search.tavily_api_key or env.tavily_api_key,
+            "perplexity": search.perplexity_api_key or env.perplexity_api_key,
+            "brave": search.brave_api_key or env.brave_api_key,
+        }
+        active_key = key_map.get(search.provider, "")
+        if active_key:
+            search_st = {
+                "status": "valid",
+                "message": f"{provider_label} 연결됨 (API Key 설정됨)",
+            }
         else:
-            brave_st = {"status": "missing", "message": "BRAVE_API_KEY가 없습니다."}
+            search_st = {
+                "status": "missing",
+                "message": f"{provider_label} API Key가 없습니다.",
+            }
 
     return {
         "claude": claude_st,
         "openai": openai_st,
         "supabase": supabase_st,
-        "brave": brave_st,
+        "search": search_st,
     }
 
 

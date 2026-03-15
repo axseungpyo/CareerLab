@@ -27,6 +27,18 @@ class SupabaseSettings(BaseModel):
     service_role_key: str = ""
 
 
+class SearchSettings(BaseModel):
+    """Web search provider configuration.
+
+    provider: "tavily" | "perplexity" | "brave"
+    """
+    enabled: bool = True
+    provider: str = "tavily"
+    tavily_api_key: str = ""
+    perplexity_api_key: str = ""
+    brave_api_key: str = ""
+
+
 class LLMSettings(BaseModel):
     """LLM provider configuration."""
     claude: ProviderSettings = ProviderSettings(
@@ -35,8 +47,7 @@ class LLMSettings(BaseModel):
     openai: ProviderSettings = ProviderSettings(
         enabled=True, auth_mode="api_key",
     )
-    brave_api_key: str = ""
-    brave_search_enabled: bool = True
+    search: SearchSettings = SearchSettings()
 
 
 class FeatureFlags(BaseModel):

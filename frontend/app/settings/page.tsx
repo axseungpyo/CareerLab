@@ -31,14 +31,25 @@ interface ProviderConfig {
   has_key?: boolean;
 }
 
+interface SearchConfig {
+  enabled: boolean;
+  provider: string;
+  tavily_api_key: string;
+  perplexity_api_key: string;
+  brave_api_key: string;
+  tavily_api_key_masked?: string;
+  has_tavily_key?: boolean;
+  perplexity_api_key_masked?: string;
+  has_perplexity_key?: boolean;
+  brave_api_key_masked?: string;
+  has_brave_key?: boolean;
+}
+
 interface SettingsData {
   llm: {
     claude: ProviderConfig;
     openai: ProviderConfig;
-    brave_api_key: string;
-    brave_search_enabled: boolean;
-    brave_api_key_masked?: string;
-    has_brave_key?: boolean;
+    search: SearchConfig;
   };
   supabase: {
     url: string;
@@ -63,7 +74,7 @@ interface ConnectionStatus {
   claude: ServiceStatus;
   openai: ServiceStatus;
   supabase: ServiceStatus;
-  brave: ServiceStatus;
+  search: ServiceStatus;
 }
 
 const STATUS_STYLES: Record<string, { dot: string; label: string }> = {
@@ -105,7 +116,8 @@ export default function SettingsPage() {
 
   const [claudeKey, setClaudeKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
-  const [braveKey, setBraveKey] = useState("");
+  const [tavilyKey, setTavilyKey] = useState("");
+  const [perplexityKey, setPerplexityKey] = useState("");
   const [supabaseUrl, setSupabaseUrl] = useState("");
   const [supabaseAnonKey, setSupabaseAnonKey] = useState("");
   const [supabaseServiceKey, setSupabaseServiceKey] = useState("");
@@ -148,8 +160,12 @@ export default function SettingsPage() {
             credentials_path: settings.llm.openai.credentials_path,
             ...(openaiKey ? { api_key: openaiKey } : {}),
           },
-          brave_search_enabled: settings.llm.brave_search_enabled,
-          ...(braveKey ? { brave_api_key: braveKey } : {}),
+          search: {
+            enabled: settings.llm.search.enabled,
+            provider: settings.llm.search.provider,
+            ...(tavilyKey ? { tavily_api_key: tavilyKey } : {}),
+            ...(perplexityKey ? { perplexity_api_key: perplexityKey } : {}),
+          },
         },
         supabase: {
           url: supabaseUrl || undefined,
@@ -162,7 +178,8 @@ export default function SettingsPage() {
       setSettings(updated);
       setClaudeKey("");
       setOpenaiKey("");
-      setBraveKey("");
+      setTavilyKey("");
+      setPerplexityKey("");
       setSupabaseAnonKey("");
       setSupabaseServiceKey("");
       setSupabaseUrl(updated.supabase.url_display || updated.supabase.url || "");
@@ -252,8 +269,10 @@ export default function SettingsPage() {
               setClaudeKey={setClaudeKey}
               openaiKey={openaiKey}
               setOpenaiKey={setOpenaiKey}
-              braveKey={braveKey}
-              setBraveKey={setBraveKey}
+              tavilyKey={tavilyKey}
+              setTavilyKey={setTavilyKey}
+              perplexityKey={perplexityKey}
+              setPerplexityKey={setPerplexityKey}
               supabaseUrl={supabaseUrl}
               setSupabaseUrl={setSupabaseUrl}
               supabaseAnonKey={supabaseAnonKey}
@@ -279,7 +298,8 @@ export default function SettingsPage() {
 
 function ConnectionsTab({
   settings, status, claudeKey, setClaudeKey, openaiKey, setOpenaiKey,
-  braveKey, setBraveKey, supabaseUrl, setSupabaseUrl,
+  tavilyKey, setTavilyKey, perplexityKey, setPerplexityKey,
+  supabaseUrl, setSupabaseUrl,
   supabaseAnonKey, setSupabaseAnonKey, supabaseServiceKey, setSupabaseServiceKey,
   updateProvider, setSettings,
 }: {
@@ -287,7 +307,8 @@ function ConnectionsTab({
   status: ConnectionStatus | null;
   claudeKey: string; setClaudeKey: (v: string) => void;
   openaiKey: string; setOpenaiKey: (v: string) => void;
-  braveKey: string; setBraveKey: (v: string) => void;
+  tavilyKey: string; setTavilyKey: (v: string) => void;
+  perplexityKey: string; setPerplexityKey: (v: string) => void;
   supabaseUrl: string; setSupabaseUrl: (v: string) => void;
   supabaseAnonKey: string; setSupabaseAnonKey: (v: string) => void;
   supabaseServiceKey: string; setSupabaseServiceKey: (v: string) => void;
@@ -468,41 +489,95 @@ function ConnectionsTab({
         </CardContent>
       </Card>
 
-      {/* Brave */}
+      {/* Web Search */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center justify-between">
             <div className="flex items-center gap-2">
-              Brave Search
-              <StatusDot status={status?.brave} />
+              웹 검색
+              <StatusDot status={status?.search} />
             </div>
             <Toggle
-              enabled={settings.llm.brave_search_enabled}
+              enabled={settings.llm.search.enabled}
               onToggle={() =>
                 setSettings((s) => s ? ({
                   ...s,
-                  llm: { ...s.llm, brave_search_enabled: !s.llm.brave_search_enabled },
+                  llm: { ...s.llm, search: { ...s.llm.search, enabled: !s.llm.search.enabled } },
                 }) : s)
               }
             />
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div>
-            <Label className="text-xs">
-              API Key
-              {settings.llm.has_brave_key && (
-                <span className="ml-1 text-green-600 dark:text-green-400 text-[10px]">설정됨</span>
-              )}
-            </Label>
-            <Input
-              type="password"
-              value={braveKey}
-              onChange={(e) => setBraveKey(e.target.value)}
-              placeholder={settings.llm.has_brave_key ? "변경 시 입력" : "BSA..."}
-              className="font-mono text-xs"
-            />
+            <Label className="text-xs">검색 프로바이더</Label>
+            <Select
+              value={settings.llm.search.provider}
+              onValueChange={(v) => {
+                if (!v) return;
+                setSettings((s) => s ? ({
+                  ...s,
+                  llm: { ...s.llm, search: { ...s.llm.search, provider: v } },
+                }) : s);
+              }}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tavily">Tavily (AI 검색)</SelectItem>
+                <SelectItem value="perplexity">Perplexity Sonar (검색+요약)</SelectItem>
+                <SelectItem value="brave">Brave Search (레거시)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            {settings.llm.search.provider === "tavily" && (
+              <div className="col-span-2">
+                <Label className="text-xs">
+                  Tavily API Key
+                  {settings.llm.search.has_tavily_key && (
+                    <span className="ml-1 text-green-600 dark:text-green-400 text-[10px]">설정됨</span>
+                  )}
+                </Label>
+                <Input
+                  type="password"
+                  value={tavilyKey}
+                  onChange={(e) => setTavilyKey(e.target.value)}
+                  placeholder={settings.llm.search.has_tavily_key ? "변경 시 입력" : "tvly-..."}
+                  className="font-mono text-xs"
+                />
+              </div>
+            )}
+            {settings.llm.search.provider === "perplexity" && (
+              <div className="col-span-2">
+                <Label className="text-xs">
+                  Perplexity API Key
+                  {settings.llm.search.has_perplexity_key && (
+                    <span className="ml-1 text-green-600 dark:text-green-400 text-[10px]">설정됨</span>
+                  )}
+                </Label>
+                <Input
+                  type="password"
+                  value={perplexityKey}
+                  onChange={(e) => setPerplexityKey(e.target.value)}
+                  placeholder={settings.llm.search.has_perplexity_key ? "변경 시 입력" : "pplx-..."}
+                  className="font-mono text-xs"
+                />
+              </div>
+            )}
+            {settings.llm.search.provider === "brave" && (
+              <div className="col-span-2">
+                <p className="text-xs text-muted-foreground py-2">
+                  Brave Search는 레거시 지원입니다. Tavily 또는 Perplexity Sonar로 전환을 권장합니다.
+                  기존 BRAVE_API_KEY는 환경변수(.env)에서 읽습니다.
+                </p>
+              </div>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {settings.llm.search.provider === "tavily" && "AI 에이전트/RAG에 최적화된 구조화 검색 결과 반환."}
+            {settings.llm.search.provider === "perplexity" && "검색 + LLM 요약을 한 번에 수행. 출처 포함."}
+            {settings.llm.search.provider === "brave" && "독립 인덱스 기반 프라이버시 중심 검색."}
+          </p>
         </CardContent>
       </Card>
     </div>

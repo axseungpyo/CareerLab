@@ -15,7 +15,9 @@ class Settings(BaseSettings):
     # Anthropic (env fallback)
     anthropic_api_key: str = ""
 
-    # Brave Search (env fallback)
+    # Search providers (env fallback)
+    tavily_api_key: str = ""
+    perplexity_api_key: str = ""
     brave_api_key: str = ""
 
     # App
@@ -40,9 +42,13 @@ def get_effective_supabase() -> tuple[str, str]:
     return url, key
 
 
-def get_effective_brave_key() -> str:
-    """Get effective Brave API key (settings JSON → env)."""
+def get_effective_search_keys() -> dict[str, str]:
+    """Get effective search API keys (settings JSON → env)."""
     from core.app_settings import load_app_settings
     app = load_app_settings()
     env = get_settings()
-    return app.llm.brave_api_key or env.brave_api_key
+    return {
+        "tavily": app.llm.search.tavily_api_key or env.tavily_api_key,
+        "perplexity": app.llm.search.perplexity_api_key or env.perplexity_api_key,
+        "brave": app.llm.search.brave_api_key or env.brave_api_key,
+    }
