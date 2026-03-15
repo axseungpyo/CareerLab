@@ -49,11 +49,19 @@ interface SearchConfig {
   has_perplexity_key?: boolean;
 }
 
+interface NotionConfig {
+  enabled: boolean;
+  api_key: string;
+  api_key_masked?: string;
+  has_key?: boolean;
+}
+
 interface SettingsData {
   llm: {
     claude: ProviderConfig;
     openai: ProviderConfig;
     search: SearchConfig;
+    notion: NotionConfig;
   };
   supabase: {
     url: string;
@@ -79,6 +87,7 @@ interface ConnectionStatus {
   openai: ServiceStatus;
   supabase: ServiceStatus;
   search: ServiceStatus;
+  notion: ServiceStatus;
 }
 
 // New Tavily key entry being edited (not yet saved)
@@ -127,6 +136,7 @@ export default function SettingsPage() {
   const [claudeKey, setClaudeKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
   const [perplexityKey, setPerplexityKey] = useState("");
+  const [notionKey, setNotionKey] = useState("");
   const [newTavilyKeys, setNewTavilyKeys] = useState<NewTavilyKey[]>([]);
   const [supabaseUrl, setSupabaseUrl] = useState("");
   const [supabaseAnonKey, setSupabaseAnonKey] = useState("");
@@ -191,6 +201,10 @@ export default function SettingsPage() {
             ...(tavilyKeysPayload.length > 0 ? { tavily_keys: tavilyKeysPayload } : {}),
             ...(perplexityKey ? { perplexity_api_key: perplexityKey } : {}),
           },
+          notion: {
+            enabled: settings.llm.notion.enabled,
+            ...(notionKey ? { api_key: notionKey } : {}),
+          },
         },
         supabase: {
           url: supabaseUrl || undefined,
@@ -204,6 +218,7 @@ export default function SettingsPage() {
       setClaudeKey("");
       setOpenaiKey("");
       setPerplexityKey("");
+      setNotionKey("");
       setNewTavilyKeys([]);
       setSupabaseAnonKey("");
       setSupabaseServiceKey("");
@@ -322,6 +337,8 @@ export default function SettingsPage() {
               setOpenaiKey={setOpenaiKey}
               perplexityKey={perplexityKey}
               setPerplexityKey={setPerplexityKey}
+              notionKey={notionKey}
+              setNotionKey={setNotionKey}
               newTavilyKeys={newTavilyKeys}
               setNewTavilyKeys={setNewTavilyKeys}
               supabaseUrl={supabaseUrl}
@@ -349,7 +366,7 @@ export default function SettingsPage() {
 
 function ConnectionsTab({
   settings, status, claudeKey, setClaudeKey, openaiKey, setOpenaiKey,
-  perplexityKey, setPerplexityKey,
+  perplexityKey, setPerplexityKey, notionKey, setNotionKey,
   newTavilyKeys, setNewTavilyKeys,
   supabaseUrl, setSupabaseUrl,
   supabaseAnonKey, setSupabaseAnonKey, supabaseServiceKey, setSupabaseServiceKey,
@@ -360,6 +377,7 @@ function ConnectionsTab({
   claudeKey: string; setClaudeKey: (v: string) => void;
   openaiKey: string; setOpenaiKey: (v: string) => void;
   perplexityKey: string; setPerplexityKey: (v: string) => void;
+  notionKey: string; setNotionKey: (v: string) => void;
   newTavilyKeys: NewTavilyKey[]; setNewTavilyKeys: (v: NewTavilyKey[]) => void;
   supabaseUrl: string; setSupabaseUrl: (v: string) => void;
   supabaseAnonKey: string; setSupabaseAnonKey: (v: string) => void;
@@ -694,6 +712,58 @@ function ConnectionsTab({
           <p className="text-[11px] text-muted-foreground">
             {settings.llm.search.provider === "tavily" && "AI 에이전트/RAG에 최적화된 구조화 검색 결과 반환. 한도 초과 시 자동 키 전환."}
             {settings.llm.search.provider === "perplexity" && "검색 + LLM 요약을 한 번에 수행. 출처 포함."}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Notion */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              Notion
+              <StatusDot status={status?.notion} />
+            </div>
+            <Toggle
+              enabled={settings.llm.notion.enabled}
+              onToggle={() =>
+                setSettings((s) => s ? ({
+                  ...s,
+                  llm: { ...s.llm, notion: { ...s.llm.notion, enabled: !s.llm.notion.enabled } },
+                }) : s)
+              }
+            />
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {status?.notion && <StatusMsg status={status.notion} />}
+          <div>
+            <Label className="text-xs">
+              Internal Integration Token
+              {settings.llm.notion.has_key && (
+                <span className="ml-1 text-green-600 dark:text-green-400 text-[10px]">
+                  ({settings.llm.notion.api_key_masked})
+                </span>
+              )}
+            </Label>
+            <Input
+              type="password"
+              value={notionKey}
+              onChange={(e) => setNotionKey(e.target.value)}
+              placeholder={settings.llm.notion.has_key ? "변경 시 입력" : "ntn_..."}
+              className="font-mono text-xs"
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            <a
+              href="https://www.notion.so/my-integrations"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              notion.so/my-integrations
+            </a>
+            에서 Internal Integration 생성 후, 가져올 페이지에 연결(Connection)하세요.
           </p>
         </CardContent>
       </Card>

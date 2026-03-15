@@ -46,6 +46,12 @@ class SearchSettings(BaseModel):
     perplexity_api_key: str = ""
 
 
+class NotionSettings(BaseModel):
+    """Notion integration settings."""
+    enabled: bool = False
+    api_key: str = ""
+
+
 class LLMSettings(BaseModel):
     """LLM provider configuration."""
     claude: ProviderSettings = ProviderSettings(
@@ -55,6 +61,7 @@ class LLMSettings(BaseModel):
         enabled=True, auth_mode="api_key",
     )
     search: SearchSettings = SearchSettings()
+    notion: NotionSettings = NotionSettings()
 
 
 class FeatureFlags(BaseModel):

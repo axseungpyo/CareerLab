@@ -1,6 +1,7 @@
-"""Profile API routes — CRUD for profiles and career entries + file upload."""
+"""Profile API routes — CRUD for profiles and career entries + file/Notion import."""
 
 from fastapi import APIRouter, HTTPException, UploadFile, File
+from pydantic import BaseModel
 
 from modules.profile.models import (
     ProfileCreate,
@@ -77,23 +78,81 @@ async def delete_career_entry(entry_id: str):
     svc.delete_career_entry(entry_id)
 
 
-# ── File Upload ──
+# ── File Upload (expanded: PDF, DOCX, TXT, MD) ──
 
 @router.post("/upload")
 async def upload_resume(file: UploadFile = File(...)):
-    """Upload PDF/DOCX resume for parsing."""
+    """Upload resume file for parsing. Supports PDF, DOCX, TXT, MD."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="파일이 없습니다.")
 
     ext = file.filename.rsplit(".", 1)[-1].lower()
-    if ext not in ("pdf", "docx"):
+
+    from modules.profile.connectors.file import FileConnector
+    if ext not in FileConnector.SUPPORTED_EXTENSIONS:
         raise HTTPException(
-            status_code=400, detail="PDF 또는 DOCX 파일만 지원합니다."
+            status_code=400,
+            detail=f"지원하지 않는 파일 형식입니다. 지원: {', '.join(sorted(FileConnector.SUPPORTED_EXTENSIONS))}",
         )
 
     content = await file.read()
+    connector = FileConnector()
+    return await connector.parse((content, ext))
 
-    from modules.profile.parser import ResumeParser
-    parser = ResumeParser()
-    result = await parser.parse(content, ext)
-    return result
+
+# ── Notion Import ──
+
+@router.get("/import/notion/pages")
+async def list_notion_pages(query: str = ""):
+    """Search Notion workspace for pages."""
+    from core.app_settings import load_app_settings
+    settings = load_app_settings()
+
+    if not settings.llm.notion.enabled or not settings.llm.notion.api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Notion API Key가 설정되지 않았습니다. /settings에서 설정하세요.",
+        )
+
+    from modules.profile.connectors.notion import NotionConnector
+    connector = NotionConnector(settings.llm.notion.api_key)
+
+    try:
+        return await connector.list_pages(query)
+    except Exception as e:
+        error_msg = str(e)
+        if "401" in error_msg:
+            raise HTTPException(status_code=400, detail="Notion API Key가 유효하지 않습니다.")
+        if "403" in error_msg:
+            raise HTTPException(status_code=400, detail="페이지에 Integration을 연결(Connection)하세요.")
+        raise HTTPException(status_code=500, detail=f"Notion API 오류: {error_msg}")
+
+
+class NotionImportRequest(BaseModel):
+    page_id: str
+
+
+@router.post("/import/notion")
+async def import_notion_page(req: NotionImportRequest):
+    """Import a Notion page and parse into profile + career entries."""
+    from core.app_settings import load_app_settings
+    settings = load_app_settings()
+
+    if not settings.llm.notion.enabled or not settings.llm.notion.api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Notion API Key가 설정되지 않았습니다. /settings에서 설정하세요.",
+        )
+
+    from modules.profile.connectors.notion import NotionConnector
+    connector = NotionConnector(settings.llm.notion.api_key)
+
+    try:
+        return await connector.parse(req.page_id)
+    except Exception as e:
+        error_msg = str(e)
+        if "401" in error_msg:
+            raise HTTPException(status_code=400, detail="Notion API Key가 유효하지 않습니다.")
+        if "404" in error_msg:
+            raise HTTPException(status_code=404, detail="Notion 페이지를 찾을 수 없습니다.")
+        raise HTTPException(status_code=500, detail=f"Notion 가져오기 실패: {error_msg}")

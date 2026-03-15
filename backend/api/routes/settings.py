@@ -42,6 +42,10 @@ def _masked_settings(s: AppSettings) -> dict:
     data["llm"]["search"]["tavily_keys"] = []
     data["llm"]["search"]["perplexity_api_key_masked"] = _mask_key(s.llm.search.perplexity_api_key)
     data["llm"]["search"]["has_perplexity_key"] = bool(s.llm.search.perplexity_api_key)
+    # Notion
+    data["llm"]["notion"]["api_key_masked"] = _mask_key(s.llm.notion.api_key)
+    data["llm"]["notion"]["has_key"] = bool(s.llm.notion.api_key)
+    data["llm"]["notion"]["api_key"] = ""
     data["supabase"]["has_url"] = bool(s.supabase.url)
     data["supabase"]["has_anon_key"] = bool(s.supabase.anon_key)
     data["supabase"]["has_service_key"] = bool(s.supabase.service_role_key)
@@ -98,6 +102,9 @@ async def put_settings(req: SettingsUpdateRequest):
                 search["tavily_keys"] = [k.model_dump() for k in current.llm.search.tavily_keys]
             if "perplexity_api_key" not in search:
                 search["perplexity_api_key"] = current.llm.search.perplexity_api_key
+        if "notion" in llm:
+            if "api_key" not in llm["notion"]:
+                llm["notion"]["api_key"] = current.llm.notion.api_key
 
     if "supabase" in update_data:
         sb = update_data["supabase"]
@@ -121,6 +128,7 @@ class StatusResponse(BaseModel):
     openai: dict
     supabase: dict
     search: dict
+    notion: dict
 
 
 @router.get("/status")
@@ -176,11 +184,21 @@ async def connection_status():
             else:
                 search_st = {"status": "missing", "message": "Perplexity API Key가 없습니다."}
 
+    # Notion
+    notion = app.llm.notion
+    notion_st = {"status": "disabled", "message": "Notion이 비활성화되어 있습니다."}
+    if notion.enabled:
+        if notion.api_key:
+            notion_st = {"status": "valid", "message": "Notion 연결됨 (API Key 설정됨)"}
+        else:
+            notion_st = {"status": "missing", "message": "Notion API Key가 없습니다."}
+
     return {
         "claude": claude_st,
         "openai": openai_st,
         "supabase": supabase_st,
         "search": search_st,
+        "notion": notion_st,
     }
 
 

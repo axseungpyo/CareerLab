@@ -4,7 +4,21 @@ CareerLab 버전별 변경사항 기록.
 
 ---
 
-## v0.4.0 — 사용자 경험 강화 (2026-03-16, 진행 중)
+## v0.5.0 — 데이터 커넥터 (2026-03-16, 진행 중)
+
+### Step 1-2: DataConnector + FileConnector + NotionConnector + API
+- **추가** `DataConnector` 추상 클래스: `extract_text()` → `parse()` 파이프라인
+- **추가** `FileConnector`: PDF/DOCX/TXT/MD 지원 (한글 인코딩 자동 감지)
+- **추가** `NotionConnector`: Notion API 페이지 검색 + 블록 텍스트 추출 (페이지네이션)
+- **추가** `NotionSettings` 모델 (enabled + api_key)
+- **수정** `POST /api/profile/upload`: 허용 확장자 pdf,docx → pdf,docx,txt,md
+- **추가** `GET /api/profile/import/notion/pages?query=`: Notion 페이지 검색
+- **추가** `POST /api/profile/import/notion`: Notion 페이지 → GPT 구조화 → 프로필+경력
+- **추가** Settings UI: Notion 카드 (토글 + API Key + Integration 가이드 링크)
+
+---
+
+## v0.4.0 — 사용자 경험 강화 (2026-03-16)
 
 ### Phase 1: 대시보드 강화
 - **추가** `backend/api/routes/stats.py`: `GET /api/stats/summary` (자소서/합격률/면접/첨삭 통계)
