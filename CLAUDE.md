@@ -118,6 +118,11 @@ LLM 호출 실패 시 `tenacity` 기반 exponential backoff (최대 3회, 30초 
 - 커밋: conventional commits (feat:, fix:, refactor:)
 - 에러 메시지: 한국어, docstring: 영문
 
+### Agent 활용
+- 동시 태스크 진행 시 반드시 Agent 도구의 서브에이전트를 활용하여 병렬 작업 수행
+- 독립적인 백엔드/프론트엔드 작업은 서브에이전트로 병렬 실행
+- 코드 리뷰, Gap 분석 등은 전문 에이전트(code-reviewer, gap-detector) 활용
+
 ## Database Tables
 profiles, career_entries(벡터 포함), company_analyses, resumes, resume_items, interview_questions, mock_sessions, mock_messages, feedback_reports
 

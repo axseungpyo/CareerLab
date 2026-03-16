@@ -111,3 +111,29 @@ export interface FeedbackReport {
   revised_text?: string;
   created_at: string;
 }
+
+export interface Application {
+  id: string;
+  profile_id: string;
+  company_name: string;
+  job_title: string | null;
+  job_url: string | null;
+  stage: "interested" | "applied" | "interview" | "result";
+  result: "pass" | "fail" | "pending" | null;
+  deadline: string | null;
+  interview_date: string | null;
+  notes: string | null;
+  resume_id: string | null;
+  company_analysis_id: string | null;
+  parsed_data: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  company_name: string;
+  type: "deadline" | "interview";
+  date: string;
+  stage: string;
+}

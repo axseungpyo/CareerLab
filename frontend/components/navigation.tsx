@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, User, FileText, Mic, Search, Settings } from "lucide-react";
+import { Home, User, FileText, Mic, Search, Briefcase, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/theme-toggle";
 
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/resume", label: "자소서", icon: FileText },
   { href: "/interview", label: "면접", icon: Mic },
   { href: "/review", label: "첨삭", icon: Search },
+  { href: "/applications", label: "지원관리", icon: Briefcase },
   { href: "/settings", label: "설정", icon: Settings },
 ];
 
