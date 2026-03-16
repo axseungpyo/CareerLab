@@ -9,6 +9,14 @@ from modules.profile.models import (
     ProfileResponse,
     CareerEntryCreate,
     CareerEntryResponse,
+    CourseCreate,
+    CourseResponse,
+    LanguageTestCreate,
+    LanguageTestResponse,
+    CertificationCreate,
+    CertificationResponse,
+    AwardCreate,
+    AwardResponse,
 )
 from modules.profile.service import ProfileService
 
@@ -76,6 +84,86 @@ async def create_career_entry(data: CareerEntryCreate):
 async def delete_career_entry(entry_id: str):
     svc = _get_service()
     svc.delete_career_entry(entry_id)
+
+
+# ── Courses (이수교과목) ──
+
+@router.get("/courses/{profile_id}", response_model=list[CourseResponse])
+async def get_courses(profile_id: str):
+    svc = _get_service()
+    return svc._repo.get_courses(profile_id)
+
+
+@router.post("/courses", response_model=CourseResponse, status_code=201)
+async def create_course(data: CourseCreate):
+    svc = _get_service()
+    return svc._repo.create_course(data)
+
+
+@router.delete("/courses/item/{course_id}", status_code=204)
+async def delete_course(course_id: str):
+    svc = _get_service()
+    svc._repo.delete_course(course_id)
+
+
+# ── Language Tests (외국어) ──
+
+@router.get("/languages/{profile_id}", response_model=list[LanguageTestResponse])
+async def get_language_tests(profile_id: str):
+    svc = _get_service()
+    return svc._repo.get_language_tests(profile_id)
+
+
+@router.post("/languages", response_model=LanguageTestResponse, status_code=201)
+async def create_language_test(data: LanguageTestCreate):
+    svc = _get_service()
+    return svc._repo.create_language_test(data)
+
+
+@router.delete("/languages/item/{test_id}", status_code=204)
+async def delete_language_test(test_id: str):
+    svc = _get_service()
+    svc._repo.delete_language_test(test_id)
+
+
+# ── Certifications (자격증) ──
+
+@router.get("/certifications/{profile_id}", response_model=list[CertificationResponse])
+async def get_certifications(profile_id: str):
+    svc = _get_service()
+    return svc._repo.get_certifications(profile_id)
+
+
+@router.post("/certifications", response_model=CertificationResponse, status_code=201)
+async def create_certification(data: CertificationCreate):
+    svc = _get_service()
+    return svc._repo.create_certification(data)
+
+
+@router.delete("/certifications/item/{cert_id}", status_code=204)
+async def delete_certification(cert_id: str):
+    svc = _get_service()
+    svc._repo.delete_certification(cert_id)
+
+
+# ── Awards (수상경력) ──
+
+@router.get("/awards/{profile_id}", response_model=list[AwardResponse])
+async def get_awards(profile_id: str):
+    svc = _get_service()
+    return svc._repo.get_awards(profile_id)
+
+
+@router.post("/awards", response_model=AwardResponse, status_code=201)
+async def create_award(data: AwardCreate):
+    svc = _get_service()
+    return svc._repo.create_award(data)
+
+
+@router.delete("/awards/item/{award_id}", status_code=204)
+async def delete_award(award_id: str):
+    svc = _get_service()
+    svc._repo.delete_award(award_id)
 
 
 # ── File Upload (expanded: PDF, DOCX, TXT, MD) ──

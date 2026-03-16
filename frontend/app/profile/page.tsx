@@ -541,10 +541,10 @@ export default function ProfilePage() {
                       <div className="flex items-center gap-2">
                         <Input
                           type="date"
-                          value={eduDraft.period.split("~")[0]?.trim() || ""}
+                          value={(eduDraft.period || "").split("~")[0]?.trim() || ""}
                           onChange={(e) => {
                             const end =
-                              eduDraft.period.split("~")[1]?.trim() || "";
+                              (eduDraft.period || "").split("~")[1]?.trim() || "";
                             setEduDraft({
                               ...eduDraft,
                               period: `${e.target.value} ~ ${end}`,
@@ -557,10 +557,10 @@ export default function ProfilePage() {
                         </span>
                         <Input
                           type="date"
-                          value={eduDraft.period.split("~")[1]?.trim() || ""}
+                          value={(eduDraft.period || "").split("~")[1]?.trim() || ""}
                           onChange={(e) => {
                             const start =
-                              eduDraft.period.split("~")[0]?.trim() || "";
+                              (eduDraft.period || "").split("~")[0]?.trim() || "";
                             setEduDraft({
                               ...eduDraft,
                               period: `${start} ~ ${e.target.value}`,
@@ -679,10 +679,10 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-2">
                       <Input
                         placeholder="시작년도"
-                        value={eduDraft.period.split("~")[0]?.trim() || ""}
+                        value={(eduDraft.period || "").split("~")[0]?.trim() || ""}
                         onChange={(e) => {
                           const end =
-                            eduDraft.period.split("~")[1]?.trim() || "";
+                            (eduDraft.period || "").split("~")[1]?.trim() || "";
                           setEduDraft({
                             ...eduDraft,
                             period: `${e.target.value} ~ ${end}`,
@@ -692,10 +692,10 @@ export default function ProfilePage() {
                       <span className="text-muted-foreground shrink-0">~</span>
                       <Input
                         placeholder="종료년도"
-                        value={eduDraft.period.split("~")[1]?.trim() || ""}
+                        value={(eduDraft.period || "").split("~")[1]?.trim() || ""}
                         onChange={(e) => {
                           const start =
-                            eduDraft.period.split("~")[0]?.trim() || "";
+                            (eduDraft.period || "").split("~")[0]?.trim() || "";
                           setEduDraft({
                             ...eduDraft,
                             period: `${start} ~ ${e.target.value}`,
