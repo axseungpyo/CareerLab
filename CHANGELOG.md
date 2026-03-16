@@ -4,7 +4,44 @@ CareerLab 버전별 변경사항 기록.
 
 ---
 
-## v0.5.0 — 데이터 커넥터 (2026-03-16, 진행 중)
+## v0.7.0 — 프로필 UX 고도화 + Supabase 원격 전환 (2026-03-16)
+
+### 프로필 페이지 리디자인
+- **개선** 4탭 구조 전환: 기본정보 / 학력 / 경력 / 가져오기
+- **추가** 프로필 완성도 프로그레스 바 (5필드 기준 %)
+- **추가** 학력 탭: 학교명 datalist 자동완성 (30개교), 전공 datalist (29개), 학위 Select 드롭다운
+- **추가** 학력 탭: 기간 입력 date input (시작~종료)
+- **개선** 경력 탭: 인라인 편집 모드 + STAR 접기/펼치기
+- **개선** 가져오기 탭: 파일/Notion 파싱 → 미리보기 카드 → "반영" 버튼으로 폼 자동 채우기
+- **개선** `ProfileForm`: 제어 컴포넌트 리팩토링 (개별 필드 props), 핵심가치 태그 칩 (Enter 추가/X 삭제)
+- **개선** `CareerEntryForm`: 편집 모드 `editEntry` prop 추가
+
+### Supabase 원격 전환
+- **변경** DB 연결: 로컬 Docker (`localhost:54321`) → 원격 Supabase (`mgnhqxqqcaoisnejmjmh.supabase.co`)
+- **추가** Supabase MCP로 원격 DB 스키마 생성 (10 테이블 + 트리거 + 인덱스 + RPC)
+- **추가** `applications` 테이블 (15 컬럼, stage/result CHECK 제약조건)
+- **추가** pgvector 확장 + `match_career_entries` RPC 함수
+- **정리** 로컬 Docker Supabase 컨테이너 중지, 더미 데이터 초기화
+
+---
+
+## v0.6.0 — 취업 관리 시스템 (2026-03-16)
+
+### 백엔드
+- **추가** `modules/application/`: models, repository, service, url_parser
+- **추가** `api/routes/application.py`: CRUD + PATCH stage + POST parse-url + GET calendar (10개 엔드포인트)
+- **추가** URL 자동 파싱: Tavily 크롤링 + GPT 추출 (직접 fetch 폴백)
+
+### 프론트엔드
+- **추가** `/applications`: 칸반 보드 (4단계: 관심 → 지원 → 면접 → 결과)
+- **추가** `/applications/new`: 등록 페이지 (URL 자동 파싱 + 수동 입력)
+- **추가** `/applications/[id]`: 상세 페이지 (단계 변경 + 메모)
+- **추가** `/applications/calendar`: 월간 캘린더 뷰 (CSS Grid, 마감일/면접일 표시)
+- **추가** 네비게이션: "지원관리" 메뉴 (Briefcase 아이콘)
+
+---
+
+## v0.5.0 — 데이터 커넥터 (2026-03-16)
 
 ### Step 1-2: DataConnector + FileConnector + NotionConnector + API
 - **추가** `DataConnector` 추상 클래스: `extract_text()` → `parse()` 파이프라인
