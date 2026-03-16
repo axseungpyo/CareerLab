@@ -118,10 +118,32 @@ LLM 호출 실패 시 `tenacity` 기반 exponential backoff (최대 3회, 30초 
 - 커밋: conventional commits (feat:, fix:, refactor:)
 - 에러 메시지: 한국어, docstring: 영문
 
-### Agent 활용
+### Agent 활용 — 서브에이전트 vs 팀에이전트
+
+**서브에이전트 (Agent 도구, 기본)**
 - 동시 태스크 진행 시 반드시 Agent 도구의 서브에이전트를 활용하여 병렬 작업 수행
 - 독립적인 백엔드/프론트엔드 작업은 서브에이전트로 병렬 실행
 - 코드 리뷰, Gap 분석 등은 전문 에이전트(code-reviewer, gap-detector) 활용
+- 탐색/검색 작업은 `subagent_type=Explore`, 계획 작업은 `subagent_type=Plan` 사용
+- 결과가 필요한 작업은 foreground, 독립 작업은 `run_in_background=true`
+
+**사용 시점:**
+- 2개 이상 독립적인 파일 생성/수정이 필요할 때
+- 백엔드 구현과 프론트엔드 구현을 동시 진행할 때
+- 코드베이스 탐색이 넓은 범위일 때 (Explore 에이전트)
+- Gap 분석, 코드 리뷰 등 전문 분석이 필요할 때
+
+**팀에이전트 (PDCA Team Mode, 대규모 작업)**
+- `/pdca team {feature}` 로 시작 (환경변수 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` 필요)
+- CTO Lead가 전체 PDCA 사이클을 오케스트레이션
+- 대규모 기능(1000자+ 설명) 또는 Match Rate < 70% 반복 개선 시 활용
+- Dynamic: 3명 (developer, frontend, qa)
+- Enterprise: 5명 (architect, developer, qa, reviewer, security)
+
+**사용 시점:**
+- 여러 모듈에 걸친 대규모 기능 구현 (예: 새 도메인 모듈 + API + UI 전체)
+- PDCA 반복 개선에서 병렬 수정이 필요할 때
+- 아키텍처 리뷰와 구현을 동시에 진행할 때
 
 ## Database Tables
 profiles, career_entries(벡터 포함), company_analyses, resumes, resume_items, interview_questions, mock_sessions, mock_messages, feedback_reports
