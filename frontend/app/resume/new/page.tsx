@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ type Step = "input" | "analyzing" | "matched" | "generating";
 
 export default function NewResumePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("input");
 
   // Step 1: Input
@@ -33,6 +34,26 @@ export default function NewResumePage() {
   // Step 2: Analysis result
   const [analysis, setAnalysis] = useState<CompanyAnalysis | null>(null);
   const [analysisDetail, setAnalysisDetail] = useState<Record<string, unknown>>({});
+
+  // Load existing analysis from URL param
+  useEffect(() => {
+    const analysisId = searchParams.get("analysisId");
+    if (analysisId) {
+      (async () => {
+        try {
+          const existing = await api.get<CompanyAnalysis>(`/api/company/${analysisId}`);
+          setAnalysis(existing);
+          setCompanyName(existing.company_name);
+          const p = await api.get<Profile | null>("/api/profile");
+          setProfile(p);
+          setStep("matched");
+          toast.success(`"${existing.company_name}" 분석을 불러왔습니다.`);
+        } catch {
+          toast.error("기존 분석을 불러올 수 없습니다.");
+        }
+      })();
+    }
+  }, [searchParams]);
 
   // Step 3: Generation options
   const [question, setQuestion] = useState("");

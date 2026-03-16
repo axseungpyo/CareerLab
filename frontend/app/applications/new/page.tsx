@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ interface ParsedResult {
 
 export default function NewApplicationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [parsing, setParsing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -41,11 +42,17 @@ export default function NewApplicationPage() {
   const [interviewDate, setInterviewDate] = useState("");
   const [notes, setNotes] = useState("");
   const [resumeId, setResumeId] = useState("");
+  const [analysisId, setAnalysisId] = useState("");
   const [parsedData, setParsedData] = useState<ParsedResult | null>(null);
 
   useEffect(() => {
     api.get<Resume[]>("/api/resume").then(setResumes).catch(() => {});
-  }, []);
+    // Pre-fill from URL params (from company analysis hub)
+    const cn = searchParams.get("companyName");
+    const aid = searchParams.get("analysisId");
+    if (cn) setCompanyName(cn);
+    if (aid) setAnalysisId(aid);
+  }, [searchParams]);
 
   async function handleParse() {
     if (!jobUrl.trim()) {
@@ -86,6 +93,7 @@ export default function NewApplicationPage() {
         interview_date: interviewDate || null,
         notes: notes || null,
         resume_id: resumeId || null,
+        company_analysis_id: analysisId || null,
         parsed_data: parsedData || null,
       });
       toast.success("지원이 등록되었습니다");

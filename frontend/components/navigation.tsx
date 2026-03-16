@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, User, FileText, Mic, Search, Briefcase, Settings } from "lucide-react";
+import { Home, User, Building2, FileText, Mic, Search, Briefcase, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/theme-toggle";
 
 const NAV_ITEMS = [
   { href: "/", label: "홈", icon: Home },
   { href: "/profile", label: "프로필", icon: User },
+  { href: "/company", label: "기업분석", icon: Building2 },
   { href: "/resume", label: "자소서", icon: FileText },
   { href: "/interview", label: "면접", icon: Mic },
   { href: "/review", label: "첨삭", icon: Search },
@@ -16,7 +17,9 @@ const NAV_ITEMS = [
   { href: "/settings", label: "설정", icon: Settings },
 ];
 
-const MOBILE_NAV = NAV_ITEMS.filter((n) => n.href !== "/settings");
+const MOBILE_NAV = NAV_ITEMS.filter(
+  (n) => n.href !== "/settings" && n.href !== "/review"
+);
 
 export default function Navigation() {
   const pathname = usePathname();

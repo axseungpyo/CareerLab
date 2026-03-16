@@ -39,11 +39,12 @@ async def oauth_health():
 
 
 # Route registration
-from api.routes import chat, profile, resume, interview, settings as settings_routes, stats, application
+from api.routes import chat, profile, resume, interview, settings as settings_routes, stats, application, company
 
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(resume.router, prefix="/api/resume", tags=["resume"])
+app.include_router(company.router, prefix="/api/company", tags=["company"])
 app.include_router(interview.router, prefix="/api/interview", tags=["interview"])
 app.include_router(settings_routes.router, prefix="/api/settings", tags=["settings"])
 app.include_router(stats.router, prefix="/api/stats", tags=["stats"])

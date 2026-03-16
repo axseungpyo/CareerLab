@@ -82,3 +82,21 @@ class CompanyAnalyzer:
             .execute()
         )
         return result.data
+
+    def delete_analysis(self, analysis_id: str) -> None:
+        """Delete company analysis after checking FK references."""
+        refs_resumes = (
+            self._db.table("resumes")
+            .select("id")
+            .eq("company_analysis_id", analysis_id)
+            .execute()
+        )
+        refs_apps = (
+            self._db.table("applications")
+            .select("id")
+            .eq("company_analysis_id", analysis_id)
+            .execute()
+        )
+        if refs_resumes.data or refs_apps.data:
+            raise ValueError("이 분석을 참조하는 자소서 또는 지원이 있어 삭제할 수 없습니다.")
+        self._db.table("company_analyses").delete().eq("id", analysis_id).execute()
