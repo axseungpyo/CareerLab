@@ -13,8 +13,11 @@ from core.app_settings import load_app_settings
 _tavily_key_index: int = 0
 
 
+# ── Public API ──
+
+
 async def search_company(company_name: str, max_results: int = 5) -> list[dict]:
-    """Search for company information using the configured search provider."""
+    """Search for company information using the configured search provider (legacy)."""
     settings = load_app_settings()
     search = settings.llm.search
 
@@ -23,15 +26,75 @@ async def search_company(company_name: str, max_results: int = 5) -> list[dict]:
 
     provider = search.provider
     if provider == "tavily":
-        return await _search_tavily(company_name, max_results)
+        query = f"{company_name} 기업정보 채용 인재상 최근 뉴스"
+        return await _search_tavily(query, max_results)
     elif provider == "perplexity":
         return await _search_perplexity(company_name, search.perplexity_api_key, max_results)
 
     return []
 
 
+async def search_company_deep(company_name: str) -> dict[str, list[dict]]:
+    """Deep company research — 3 parallel category searches.
+
+    Returns:
+        {
+            "culture": [...],  # 기업 개요, 조직문화, 핵심가치
+            "news": [...],     # 최근 뉴스, 사업 동향, 실적
+            "hiring": [...],   # 채용 트렌드, 면접 후기, 합격 전략
+        }
+    """
+    settings = load_app_settings()
+    search = settings.llm.search
+
+    if not search.enabled:
+        return {"culture": [], "news": [], "hiring": []}
+
+    queries = {
+        "culture": f"{company_name} 기업문화 조직문화 핵심가치 비전 인재상",
+        "news": f"{company_name} 최근 뉴스 사업 동향 실적 2025 2026",
+        "hiring": f"{company_name} 채용 면접 후기 합격 자소서 팁",
+    }
+
+    provider = search.provider
+    results: dict[str, list[dict]] = {}
+
+    if provider == "tavily":
+        import asyncio
+        tasks = {
+            key: _search_tavily(query, max_results=3)
+            for key, query in queries.items()
+        }
+        gathered = await asyncio.gather(*tasks.values(), return_exceptions=True)
+        for key, result in zip(tasks.keys(), gathered):
+            results[key] = result if isinstance(result, list) else []
+
+    elif provider == "perplexity":
+        api_key = search.perplexity_api_key
+        import asyncio
+        perplexity_queries = {
+            "culture": f"{company_name}의 기업문화, 조직문화, 핵심가치, 인재상을 알려줘.",
+            "news": f"{company_name}의 최근 뉴스, 사업 동향, 실적을 알려줘.",
+            "hiring": f"{company_name}의 채용 트렌드, 면접 특징, 자소서 합격 전략을 알려줘.",
+        }
+        tasks = {
+            key: _search_perplexity_custom(query, api_key)
+            for key, query in perplexity_queries.items()
+        }
+        gathered = await asyncio.gather(*tasks.values(), return_exceptions=True)
+        for key, result in zip(tasks.keys(), gathered):
+            results[key] = result if isinstance(result, list) else []
+    else:
+        results = {"culture": [], "news": [], "hiring": []}
+
+    return results
+
+
+# ── Tavily ──
+
+
 async def _search_tavily(
-    company_name: str, max_results: int,
+    query: str, max_results: int = 5,
 ) -> list[dict]:
     """Search using Tavily AI Search API with multi-key rotation on rate limit."""
     global _tavily_key_index
@@ -43,14 +106,13 @@ async def _search_tavily(
 
     url = "https://api.tavily.com/search"
 
-    # Try each key starting from _tavily_key_index
     for attempt in range(len(keys)):
         idx = (_tavily_key_index + attempt) % len(keys)
         key_entry = keys[idx]
 
         payload = {
             "api_key": key_entry.api_key,
-            "query": f"{company_name} 기업정보 채용 인재상 최근 뉴스",
+            "query": query,
             "max_results": max_results,
             "search_depth": "advanced",
             "include_answer": True,
@@ -60,20 +122,18 @@ async def _search_tavily(
             try:
                 resp = await client.post(url, json=payload)
                 if resp.status_code == 429:
-                    # Rate limited — rotate to next key
                     continue
                 resp.raise_for_status()
             except httpx.HTTPError:
                 continue
 
-        # Success — update index for next call
         _tavily_key_index = idx
 
         data = resp.json()
         results = []
         if data.get("answer"):
             results.append({
-                "title": f"{company_name} — AI 요약",
+                "title": "AI 요약",
                 "description": data["answer"],
                 "url": "",
             })
@@ -85,14 +145,24 @@ async def _search_tavily(
             })
         return results[:max_results]
 
-    # All keys exhausted
     return []
+
+
+# ── Perplexity ──
 
 
 async def _search_perplexity(
     company_name: str, api_key: str, max_results: int,
 ) -> list[dict]:
-    """Search using Perplexity Sonar API (chat completions with web search)."""
+    """Search using Perplexity Sonar API (legacy single query)."""
+    query = f"{company_name}의 기업 정보, 인재상, 최근 뉴스, 채용 동향을 알려줘."
+    return await _search_perplexity_custom(query, api_key, max_results)
+
+
+async def _search_perplexity_custom(
+    query: str, api_key: str, max_results: int = 5,
+) -> list[dict]:
+    """Search using Perplexity Sonar API with custom query."""
     if not api_key:
         return []
 
@@ -108,14 +178,11 @@ async def _search_perplexity(
                 "role": "system",
                 "content": (
                     "You are a company research assistant. "
-                    "Provide structured information about the company in Korean. "
-                    "Include: company overview, recent news, hiring culture, key values, and industry position."
+                    "Provide structured, factual information in Korean. "
+                    "Focus on specifics — numbers, names, dates — not generalities."
                 ),
             },
-            {
-                "role": "user",
-                "content": f"{company_name}의 기업 정보, 인재상, 최근 뉴스, 채용 동향을 알려줘.",
-            },
+            {"role": "user", "content": query},
         ],
     }
 
@@ -131,7 +198,7 @@ async def _search_perplexity(
     content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
     if content:
         results.append({
-            "title": f"{company_name} — Perplexity 리서치",
+            "title": "Perplexity 리서치",
             "description": content,
             "url": "",
         })
