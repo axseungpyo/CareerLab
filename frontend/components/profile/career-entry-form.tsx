@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,15 +14,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { CareerEntry } from "@/lib/types";
 
 interface CareerEntryFormProps {
   profileId: string;
+  editEntry?: CareerEntry | null;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
 }
 
 export default function CareerEntryForm({
   profileId,
+  editEntry,
   onSubmit,
   onCancel,
 }: CareerEntryFormProps) {
@@ -38,6 +42,36 @@ export default function CareerEntryForm({
   const [starResult, setStarResult] = useState("");
   const [tags, setTags] = useState("");
   const [loading, setLoading] = useState(false);
+  const [starOpen, setStarOpen] = useState(false);
+
+  const isEdit = !!editEntry;
+
+  // Pre-fill when editEntry changes
+  useEffect(() => {
+    if (editEntry) {
+      setEntryType(editEntry.entry_type);
+      setTitle(editEntry.title);
+      setContent(editEntry.content);
+      setCompany(editEntry.company || "");
+      setPosition(editEntry.position || "");
+      setPeriodStart(editEntry.period_start || "");
+      setPeriodEnd(editEntry.period_end || "");
+      setStarSituation(editEntry.star_situation || "");
+      setStarTask(editEntry.star_task || "");
+      setStarAction(editEntry.star_action || "");
+      setStarResult(editEntry.star_result || "");
+      setTags(editEntry.tags?.join(", ") || "");
+      // Expand STAR if any field has content
+      if (
+        editEntry.star_situation ||
+        editEntry.star_task ||
+        editEntry.star_action ||
+        editEntry.star_result
+      ) {
+        setStarOpen(true);
+      }
+    }
+  }, [editEntry]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -67,7 +101,7 @@ export default function CareerEntryForm({
     <Card>
       <CardHeader>
         <CardTitle className="flex justify-between items-center">
-          경력/프로젝트 추가
+          {isEdit ? "경력 수정" : "경력/프로젝트 추가"}
           <Button variant="ghost" size="sm" onClick={onCancel}>
             취소
           </Button>
@@ -78,7 +112,10 @@ export default function CareerEntryForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>유형</Label>
-              <Select value={entryType} onValueChange={(v) => v && setEntryType(v)}>
+              <Select
+                value={entryType}
+                onValueChange={(v) => v && setEntryType(v)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -139,34 +176,48 @@ export default function CareerEntryForm({
             />
           </div>
 
+          {/* Collapsible STAR section */}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">
-              STAR 구조 (선택 — 자소서 품질 향상에 도움)
-            </p>
-            <Textarea
-              placeholder="상황(Situation): 어떤 상황이었나요?"
-              value={starSituation}
-              onChange={(e) => setStarSituation(e.target.value)}
-              rows={2}
-            />
-            <Textarea
-              placeholder="과제(Task): 어떤 과제/문제가 있었나요?"
-              value={starTask}
-              onChange={(e) => setStarTask(e.target.value)}
-              rows={2}
-            />
-            <Textarea
-              placeholder="행동(Action): 어떤 행동을 취했나요?"
-              value={starAction}
-              onChange={(e) => setStarAction(e.target.value)}
-              rows={2}
-            />
-            <Textarea
-              placeholder="결과(Result): 어떤 결과를 얻었나요? (정량적 성과 포함)"
-              value={starResult}
-              onChange={(e) => setStarResult(e.target.value)}
-              rows={2}
-            />
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setStarOpen(!starOpen)}
+            >
+              STAR 구조 작성 (선택)
+              {starOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+            {starOpen && (
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="상황(Situation): 어떤 상황이었나요?"
+                  value={starSituation}
+                  onChange={(e) => setStarSituation(e.target.value)}
+                  rows={2}
+                />
+                <Textarea
+                  placeholder="과제(Task): 어떤 과제/문제가 있었나요?"
+                  value={starTask}
+                  onChange={(e) => setStarTask(e.target.value)}
+                  rows={2}
+                />
+                <Textarea
+                  placeholder="행동(Action): 어떤 행동을 취했나요?"
+                  value={starAction}
+                  onChange={(e) => setStarAction(e.target.value)}
+                  rows={2}
+                />
+                <Textarea
+                  placeholder="결과(Result): 어떤 결과를 얻었나요? (정량적 성과 포함)"
+                  value={starResult}
+                  onChange={(e) => setStarResult(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
           </div>
 
           <div>
@@ -179,7 +230,7 @@ export default function CareerEntryForm({
           </div>
 
           <Button type="submit" disabled={loading || !title || !content}>
-            {loading ? "저장 중..." : "추가"}
+            {loading ? "저장 중..." : isEdit ? "수정" : "추가"}
           </Button>
         </form>
       </CardContent>
