@@ -54,6 +54,34 @@ async function handleDeleteItem<T extends { id: string }>(
   }
 }
 
+const PRIMARY_TEST_OPTIONS = [
+  { value: "OPIc", label: "OPIc" },
+  { value: "TOEIC-Speaking", label: "TOEIC-Speaking" },
+];
+
+const OPIC_LEVELS = [
+  { value: "NH", label: "NH (Novice High)" },
+  { value: "IL", label: "IL (Intermediate Low)" },
+  { value: "IM1", label: "IM1 (Intermediate Mid 1)" },
+  { value: "IM2", label: "IM2 (Intermediate Mid 2)" },
+  { value: "IM3", label: "IM3 (Intermediate Mid 3)" },
+  { value: "IH", label: "IH (Intermediate High)" },
+  { value: "AL", label: "AL (Advanced Low)" },
+  { value: "AM", label: "AM (Advanced Mid)" },
+  { value: "AH", label: "AH (Advanced High)" },
+];
+
+const TOEIC_SPEAKING_LEVELS = [
+  { value: "Level 1", label: "Level 1 (0~30)" },
+  { value: "Level 2", label: "Level 2 (40~50)" },
+  { value: "Level 3", label: "Level 3 (60~70)" },
+  { value: "Level 4", label: "Level 4 (80~100)" },
+  { value: "Level 5", label: "Level 5 (110~120)" },
+  { value: "Level 6", label: "Level 6 (130~150)" },
+  { value: "Level 7", label: "Level 7 (160~180)" },
+  { value: "Level 8", label: "Level 8 (190~200)" },
+];
+
 export default function LanguageTab({
   profileId,
   languageTests,
@@ -63,6 +91,7 @@ export default function LanguageTab({
   awards,
   setAwards,
 }: LanguageTabProps) {
+  const [primaryDialogOpen, setPrimaryDialogOpen] = useState(false);
   const [langDialogOpen, setLangDialogOpen] = useState(false);
   const [certDialogOpen, setCertDialogOpen] = useState(false);
   const [awardDialogOpen, setAwardDialogOpen] = useState(false);
@@ -74,6 +103,15 @@ export default function LanguageTab({
   const primaryTests = languageTests.filter((t) => t.is_primary);
   const otherTests = languageTests.filter((t) => !t.is_primary);
 
+  const primaryFields: FieldConfig[] = [
+    { name: "test_name", label: "시험종류", type: "select", required: true, options: PRIMARY_TEST_OPTIONS },
+    { name: "level", label: "등급", type: "select", required: true, options: OPIC_LEVELS, placeholder: "등급 선택" },
+    { name: "score", label: "점수", type: "text", placeholder: "TOEIC-Speaking: 점수 입력 (예: 160)" },
+    { name: "test_date", label: "응시일자", type: "date", required: true },
+    { name: "test_location", label: "응시장소", type: "select", options: TEST_LOCATION_OPTIONS, defaultValue: "국내" },
+    { name: "cert_number", label: "자격번호", type: "text", required: true, placeholder: "성적표 자격번호" },
+  ];
+
   const langFields: FieldConfig[] = [
     { name: "test_name", label: "시험명", type: "select", required: true, options: LANGUAGE_TEST_OPTIONS },
     { name: "language", label: "언어", type: "text", defaultValue: "영어", placeholder: "영어" },
@@ -82,7 +120,6 @@ export default function LanguageTab({
     { name: "test_date", label: "응시일자", type: "date" },
     { name: "test_location", label: "응시장소", type: "select", options: TEST_LOCATION_OPTIONS, defaultValue: "국내" },
     { name: "cert_number", label: "자격번호", type: "text", placeholder: "성적표 자격번호" },
-    { name: "is_primary", label: "영어회화 필수자격", type: "checkbox", placeholder: "OPIc/TOEIC-Speaking 필수자격으로 등록" },
   ];
 
   const certFields: FieldConfig[] = [
@@ -128,16 +165,27 @@ export default function LanguageTab({
       {/* 영어회화 필수자격 */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Shield className="h-4 w-4 text-indigo-500" />
-            영어회화 필수자격 (OPIc / TOEIC-Speaking)
+          <CardTitle className="text-sm flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-indigo-500" />
+              영어회화 필수자격
+            </span>
+            <Button size="sm" variant="outline" onClick={() => setPrimaryDialogOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" />등록
+            </Button>
           </CardTitle>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            삼성 지원 시 OPIc 또는 TOEIC-Speaking 중 1개 필수 제출
+          </p>
         </CardHeader>
         <CardContent>
           {primaryTests.length > 0 ? (
             <div className="space-y-2">{primaryTests.map(renderTestCard)}</div>
           ) : (
-            <p className="text-xs text-muted-foreground text-center py-3">등록된 필수 어학 자격이 없습니다. 아래에서 추가 시 &ldquo;필수자격&rdquo; 체크하세요.</p>
+            <div className="text-center py-4">
+              <p className="text-xs text-muted-foreground">등록된 필수 어학 자격이 없습니다.</p>
+              <p className="text-[11px] text-muted-foreground mt-1">OPIc IM2 이상 또는 TOEIC-Speaking Level 6 이상 권장</p>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -230,6 +278,18 @@ export default function LanguageTab({
       </Card>
 
       {/* Dialogs */}
+      <AddItemDialog open={primaryDialogOpen} onOpenChange={setPrimaryDialogOpen}
+        title="영어회화 필수자격 등록"
+        description="삼성 지원 시 필수 제출 자격입니다. OPIc 또는 TOEIC-Speaking을 선택하세요."
+        fields={primaryFields}
+        onSubmit={async (data) => {
+          const result = await api.post<LanguageTest>("/api/profile/languages", {
+            profile_id: profileId, ...data, language: "영어", is_primary: true,
+          });
+          setLanguageTests([result, ...languageTests]);
+          toast.success("필수자격이 등록되었습니다.");
+        }} />
+
       <AddItemDialog open={langDialogOpen} onOpenChange={setLangDialogOpen} title="어학시험 추가" fields={langFields}
         onSubmit={async (data) => {
           const result = await api.post<LanguageTest>("/api/profile/languages", { profile_id: profileId, ...data });
