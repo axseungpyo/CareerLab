@@ -58,6 +58,10 @@ class ProfileCreate(BaseModel):
     hobbies: str | None = None
     role_model: str | None = None
     role_model_reason: str | None = None
+    specialties: str | None = None
+    growth_background: str | None = None
+    personal_values: str | None = None
+    strength_weakness: str | None = None
     academic_note: str | None = None
 
 
@@ -76,6 +80,10 @@ class ProfileUpdate(BaseModel):
     hobbies: str | None = None
     role_model: str | None = None
     role_model_reason: str | None = None
+    specialties: str | None = None
+    growth_background: str | None = None
+    personal_values: str | None = None
+    strength_weakness: str | None = None
     academic_note: str | None = None
 
 
@@ -95,6 +103,10 @@ class ProfileResponse(BaseModel):
     hobbies: str | None = None
     role_model: str | None = None
     role_model_reason: str | None = None
+    specialties: str | None = None
+    growth_background: str | None = None
+    personal_values: str | None = None
+    strength_weakness: str | None = None
     academic_note: str | None = None
     created_at: str
     updated_at: str

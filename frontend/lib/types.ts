@@ -31,6 +31,10 @@ export interface Profile {
   hobbies?: string;
   role_model?: string;
   role_model_reason?: string;
+  specialties?: string;
+  growth_background?: string;
+  personal_values?: string;
+  strength_weakness?: string;
   academic_note?: string;
   created_at: string;
   updated_at: string;

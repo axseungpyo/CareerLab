@@ -51,8 +51,12 @@ export default function ProfilePage() {
   const [phoneSecondary, setPhoneSecondary] = useState("");
   const [militaryService, setMilitaryService] = useState<MilitaryService>({});
   const [hobbies, setHobbies] = useState("");
+  const [specialties, setSpecialties] = useState("");
   const [roleModel, setRoleModel] = useState("");
   const [roleModelReason, setRoleModelReason] = useState("");
+  const [growthBackground, setGrowthBackground] = useState("");
+  const [personalValues, setPersonalValues] = useState("");
+  const [strengthWeakness, setStrengthWeakness] = useState("");
   const [academicNote, setAcademicNote] = useState("");
   const [education, setEducation] = useState<Education[]>([]);
   const [entries, setEntries] = useState<CareerEntry[]>([]);
@@ -80,7 +84,11 @@ export default function ProfilePage() {
         setEducation(p.education || []); setNameEn(p.name_en || "");
         setAddress(p.address || ""); setPhoneSecondary(p.phone_secondary || "");
         setMilitaryService(p.military_service || {}); setHobbies(p.hobbies || "");
+        setSpecialties(p.specialties || "");
         setRoleModel(p.role_model || ""); setRoleModelReason(p.role_model_reason || "");
+        setGrowthBackground(p.growth_background || "");
+        setPersonalValues(p.personal_values || "");
+        setStrengthWeakness(p.strength_weakness || "");
         setAcademicNote(p.academic_note || "");
         const [e, c, l, cert, aw] = await Promise.all([
           api.get<CareerEntry[]>(`/api/profile/entries/${p.id}`),
@@ -113,8 +121,10 @@ export default function ProfilePage() {
         name_en: nameEn || undefined, address: address || undefined,
         phone_secondary: phoneSecondary || undefined,
         military_service: militaryService.status ? militaryService : undefined,
-        hobbies: hobbies || undefined, role_model: roleModel || undefined,
-        role_model_reason: roleModelReason || undefined, academic_note: academicNote || undefined,
+        hobbies: hobbies || undefined, specialties: specialties || undefined,
+        role_model: roleModel || undefined, role_model_reason: roleModelReason || undefined,
+        growth_background: growthBackground || undefined, personal_values: personalValues || undefined,
+        strength_weakness: strengthWeakness || undefined, academic_note: academicNote || undefined,
       };
       if (profileId) {
         setProfileId((await api.put<Profile>(`/api/profile/${profileId}`, data)).id);
@@ -230,8 +240,11 @@ export default function ProfilePage() {
           certifications={certifications} setCertifications={setCertifications} awards={awards} setAwards={setAwards} />
       )}
       {activeTab === "essay" && (
-        <EssayTab hobbies={hobbies} setHobbies={setHobbies} roleModel={roleModel}
-          setRoleModel={setRoleModel} roleModelReason={roleModelReason} setRoleModelReason={setRoleModelReason} />
+        <EssayTab hobbies={hobbies} setHobbies={setHobbies} specialties={specialties} setSpecialties={setSpecialties}
+          roleModel={roleModel} setRoleModel={setRoleModel} roleModelReason={roleModelReason} setRoleModelReason={setRoleModelReason}
+          growthBackground={growthBackground} setGrowthBackground={setGrowthBackground}
+          personalValues={personalValues} setPersonalValues={setPersonalValues}
+          strengthWeakness={strengthWeakness} setStrengthWeakness={setStrengthWeakness} />
       )}
       {activeTab === "import" && (
         <ImportTab onFileParsed={handleFileParsed} parsedPreview={parsedPreview} onApplyParsed={applyParsedData}
