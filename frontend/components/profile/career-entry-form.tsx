@@ -34,6 +34,11 @@ export default function CareerEntryForm({
   const [content, setContent] = useState("");
   const [company, setCompany] = useState("");
   const [position, setPosition] = useState("");
+  const [department, setDepartment] = useState("");
+  const [location, setLocation] = useState("");
+  const [employmentType, setEmploymentType] = useState("");
+  const [isCurrent, setIsCurrent] = useState(false);
+  const [activityCategory, setActivityCategory] = useState("");
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
   const [starSituation, setStarSituation] = useState("");
@@ -54,6 +59,11 @@ export default function CareerEntryForm({
       setContent(editEntry.content);
       setCompany(editEntry.company || "");
       setPosition(editEntry.position || "");
+      setDepartment(editEntry.department || "");
+      setLocation(editEntry.location || "");
+      setEmploymentType(editEntry.employment_type || "");
+      setIsCurrent(editEntry.is_current || false);
+      setActivityCategory(editEntry.activity_category || "");
       setPeriodStart(editEntry.period_start || "");
       setPeriodEnd(editEntry.period_end || "");
       setStarSituation(editEntry.star_situation || "");
@@ -84,8 +94,13 @@ export default function CareerEntryForm({
         content,
         company: company || undefined,
         position: position || undefined,
+        department: department || undefined,
+        location: location || undefined,
+        employment_type: employmentType || undefined,
+        is_current: isCurrent || undefined,
+        activity_category: activityCategory || undefined,
         period_start: periodStart || undefined,
-        period_end: periodEnd || undefined,
+        period_end: isCurrent ? undefined : (periodEnd || undefined),
         star_situation: starSituation || undefined,
         star_task: starTask || undefined,
         star_action: starAction || undefined,
@@ -124,6 +139,8 @@ export default function CareerEntryForm({
                   <SelectItem value="project">프로젝트</SelectItem>
                   <SelectItem value="skill">역량</SelectItem>
                   <SelectItem value="story">경험 스토리</SelectItem>
+                  <SelectItem value="activity">대내외활동</SelectItem>
+                  <SelectItem value="training">연수</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -139,30 +156,110 @@ export default function CareerEntryForm({
           </div>
 
           {(entryType === "career" || entryType === "project") && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <Input
-                placeholder="회사명"
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-              />
-              <Input
-                placeholder="직위"
-                value={position}
-                onChange={(e) => setPosition(e.target.value)}
-              />
-              <Input
-                type="date"
-                placeholder="시작일"
-                value={periodStart}
-                onChange={(e) => setPeriodStart(e.target.value)}
-              />
-              <Input
-                type="date"
-                placeholder="종료일"
-                value={periodEnd}
-                onChange={(e) => setPeriodEnd(e.target.value)}
-              />
-            </div>
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <Input
+                  placeholder="회사명"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                />
+                <Input
+                  placeholder="직위"
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value)}
+                />
+                <Input
+                  placeholder="부서명"
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                />
+                <Input
+                  placeholder="소재지"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
+                <div>
+                  <Label className="text-xs">근무형태</Label>
+                  <Select value={employmentType} onValueChange={(v) => setEmploymentType(v || "")}>
+                    <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="정규직">정규직</SelectItem>
+                      <SelectItem value="계약직">계약직</SelectItem>
+                      <SelectItem value="인턴">인턴</SelectItem>
+                      <SelectItem value="파트타임">파트타임</SelectItem>
+                      <SelectItem value="프리랜서">프리랜서</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <label className="flex items-center gap-2 text-sm cursor-pointer h-9">
+                  <input
+                    type="checkbox"
+                    checked={isCurrent}
+                    onChange={(e) => setIsCurrent(e.target.checked)}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  현재 근무 중
+                </label>
+                <Input
+                  type="date"
+                  placeholder="시작일"
+                  value={periodStart}
+                  onChange={(e) => setPeriodStart(e.target.value)}
+                />
+                <Input
+                  type="date"
+                  placeholder="종료일"
+                  value={periodEnd}
+                  onChange={(e) => setPeriodEnd(e.target.value)}
+                  disabled={isCurrent}
+                />
+              </div>
+            </>
+          )}
+
+          {(entryType === "activity" || entryType === "training") && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <Input
+                  placeholder="기관/단체명"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                />
+                <Input
+                  placeholder="역할/직위"
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value)}
+                />
+                <div>
+                  <Select value={activityCategory} onValueChange={(v) => setActivityCategory(v || "")}>
+                    <SelectTrigger className="text-sm"><SelectValue placeholder="활동구분" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="온라인활동">온라인활동</SelectItem>
+                      <SelectItem value="교외활동">교외활동</SelectItem>
+                      <SelectItem value="국내연수">국내연수</SelectItem>
+                      <SelectItem value="교내활동">교내활동</SelectItem>
+                      <SelectItem value="기타">기타</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="date"
+                  placeholder="시작일"
+                  value={periodStart}
+                  onChange={(e) => setPeriodStart(e.target.value)}
+                />
+                <Input
+                  type="date"
+                  placeholder="종료일"
+                  value={periodEnd}
+                  onChange={(e) => setPeriodEnd(e.target.value)}
+                />
+              </div>
+            </>
           )}
 
           <div>
