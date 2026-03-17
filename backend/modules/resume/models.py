@@ -80,3 +80,23 @@ class StatusUpdate(BaseModel):
     status: str
     result: str | None = None
     submitted_at: str | None = None
+
+
+# ── Essay Questions ──
+
+class EssayQuestionResponse(BaseModel):
+    id: str
+    company_name: str
+    period: str | None = None
+    question_number: int
+    question: str
+    char_limit: int | None = None
+    category: str | None = None
+
+class EssayQuestionCreate(BaseModel):
+    company_name: str
+    period: str | None = None
+    question_number: int
+    question: str
+    char_limit: int | None = None
+    category: str | None = None

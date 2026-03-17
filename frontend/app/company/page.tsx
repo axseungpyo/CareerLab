@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Building2, Plus, Search, Trash2 } from "lucide-react";
+import { Building2, FileText, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,22 +97,21 @@ export default function CompanyListPage() {
 
       {/* Empty State */}
       {analyses.length === 0 && (
-        <Card className="text-center py-16">
-          <CardContent>
-            <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">
-              아직 분석한 기업이 없어요
-            </h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              채용공고를 붙여넣으면 AI가 기업을 분석합니다
-            </p>
-            <Link href="/company/new">
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />첫 분석 시작
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center min-h-[40vh]">
+          <Card className="text-center py-16 px-8 w-full max-w-md">
+            <CardContent>
+              <Building2 className="h-16 w-16 mx-auto text-muted-foreground/40 mb-6" />
+              <p className="text-sm text-muted-foreground mb-6">
+                채용공고를 분석하고 맞춤 자소서를 생성해 보세요
+              </p>
+              <Link href="/company/new">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />새 분석 시작
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Card List */}
@@ -135,14 +134,29 @@ export default function CompanyListPage() {
                         })}
                       </p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={(e) => handleDelete(e, a.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Link
+                        href={`/resume/new?analysisId=${a.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          aria-label="자소서 생성"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => handleDelete(e, a.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">

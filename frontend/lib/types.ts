@@ -148,6 +148,18 @@ export interface Award {
   created_at: string;
 }
 
+// ── Essay Questions (기출문항) ──
+
+export interface EssayQuestion {
+  id: string;
+  company_name: string;
+  period?: string;
+  question_number: number;
+  question: string;
+  char_limit?: number;
+  category?: string;
+}
+
 // ── Company Analysis ──
 
 export interface CompanyAnalysis {
