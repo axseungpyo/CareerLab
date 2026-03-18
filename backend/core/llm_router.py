@@ -58,10 +58,10 @@ TASK_MODEL_MAP: dict[TaskType, ModelConfig] = {
         Provider.claude, "claude-haiku-4-5-20251001", 4096
     ),
     TaskType.company_analysis: ModelConfig(
-        Provider.openai, "gpt-4o-mini", 4096
+        Provider.claude, "claude-haiku-4-5-20251001", 4096
     ),
     TaskType.file_parsing: ModelConfig(
-        Provider.openai, "gpt-4o-mini", 4096
+        Provider.claude, "claude-haiku-4-5-20251001", 4096
     ),
     TaskType.embedding: ModelConfig(
         Provider.openai, "text-embedding-3-small", 0
@@ -249,6 +249,24 @@ async def call_openai(
     return response.choices[0].message.content or ""
 
 
+# ── JSON mode helper ─────────────────────────────────────────────────
+
+def _inject_json_instruction(messages: list[dict]) -> list[dict]:
+    """Inject JSON output instruction into system prompt for Claude (no native JSON mode)."""
+    json_suffix = "\n\nIMPORTANT: You MUST respond with valid JSON only. No markdown, no code fences, no explanation — just the raw JSON object."
+    result = []
+    found_system = False
+    for m in messages:
+        if m["role"] == "system" and not found_system:
+            result.append({"role": "system", "content": m["content"] + json_suffix})
+            found_system = True
+        else:
+            result.append(m)
+    if not found_system:
+        result.insert(0, {"role": "system", "content": json_suffix.strip()})
+    return result
+
+
 # ── Unified entry point ──────────────────────────────────────────────
 
 async def call_llm(
@@ -266,6 +284,9 @@ async def call_llm(
     app = load_app_settings()
 
     if config.provider == Provider.claude:
+        # Claude doesn't have native JSON mode — inject instruction into system prompt
+        if json_mode:
+            messages = _inject_json_instruction(messages)
         if app.llm.claude.auth_mode == "cli":
             return await call_claude_via_cli(messages, task_type, stream=stream)
         else:
