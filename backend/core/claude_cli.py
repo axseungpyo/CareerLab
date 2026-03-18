@@ -159,8 +159,11 @@ def _build_prompts(messages: list[dict]) -> tuple[str, str]:
 def _normalize_model(model: str) -> str:
     """Map model names to claude CLI aliases."""
     mapping = {
+        "claude-sonnet-4-6": "sonnet",
         "claude-sonnet-4-20250514": "sonnet",
         "claude-haiku-4-5-20251001": "haiku",
+        "claude-haiku-4-5": "haiku",
+        "claude-opus-4-6": "opus",
         "claude-opus-4-20250514": "opus",
     }
     return mapping.get(model, model)

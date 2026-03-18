@@ -46,22 +46,22 @@ class ModelConfig:
 
 TASK_MODEL_MAP: dict[TaskType, ModelConfig] = {
     TaskType.resume_gen: ModelConfig(
-        Provider.claude, "claude-sonnet-4-20250514", 4096, stream_default=True
+        Provider.claude, "claude-sonnet-4-6", 4096, stream_default=True
     ),
     TaskType.feedback: ModelConfig(
-        Provider.claude, "claude-sonnet-4-20250514", 4096
+        Provider.claude, "claude-sonnet-4-6", 4096
     ),
     TaskType.mock_interview: ModelConfig(
-        Provider.claude, "claude-sonnet-4-20250514", 2048, stream_default=True
+        Provider.claude, "claude-sonnet-4-6", 2048, stream_default=True
     ),
     TaskType.question_gen: ModelConfig(
-        Provider.claude, "claude-haiku-4-5-20251001", 4096
+        Provider.claude, "claude-sonnet-4-6", 4096
     ),
     TaskType.company_analysis: ModelConfig(
-        Provider.claude, "claude-sonnet-4-6-20250514", 4096
+        Provider.claude, "claude-sonnet-4-6", 4096
     ),
     TaskType.file_parsing: ModelConfig(
-        Provider.claude, "claude-sonnet-4-6-20250514", 4096
+        Provider.claude, "claude-sonnet-4-6", 4096
     ),
     TaskType.embedding: ModelConfig(
         Provider.openai, "text-embedding-3-small", 0
