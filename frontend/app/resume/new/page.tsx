@@ -200,7 +200,7 @@ export default function NewResumePage() {
           () => {
             setItems((prev) =>
               prev.map((it, idx) =>
-                idx === i ? { ...it, status: "done", expanded: false } : it
+                idx === i ? { ...it, status: "done", expanded: true } : it
               )
             );
           }
@@ -240,7 +240,7 @@ export default function NewResumePage() {
         },
         () => {
           setItems((prev) =>
-            prev.map((it, i) => (i === idx ? { ...it, status: "done", expanded: false } : it))
+            prev.map((it, i) => (i === idx ? { ...it, status: "done", expanded: true } : it))
           );
           toast.success(`Q${idx + 1} 재생성 완료`);
         }
@@ -519,16 +519,31 @@ export default function NewResumePage() {
                   )}
                 </div>
               </CardHeader>
-              {(item.status === "generating" || item.expanded) && (
+              {item.status === "generating" && (
                 <CardContent className="pt-0">
                   <div className="whitespace-pre-wrap text-sm leading-relaxed p-3 bg-muted rounded-md max-h-60 overflow-y-auto">
                     {item.text || "생성 중..."}
                   </div>
-                  {item.status === "done" && (
-                    <p className="text-xs text-muted-foreground mt-2 text-right">
-                      {item.text.length}자
+                </CardContent>
+              )}
+              {item.status === "done" && item.expanded && (
+                <CardContent className="pt-0 space-y-2">
+                  <Textarea
+                    value={item.text}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setItems((prev) =>
+                        prev.map((it, idx) => (idx === i ? { ...it, text: val } : it))
+                      );
+                    }}
+                    rows={10}
+                    className="text-sm leading-relaxed"
+                  />
+                  <div className="flex items-center justify-between">
+                    <p className={`text-xs ${item.charLimit && item.text.length > item.charLimit ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                      {item.text.length}{item.charLimit ? `/${item.charLimit}` : ""}자
                     </p>
-                  )}
+                  </div>
                 </CardContent>
               )}
               {item.status === "done" && !item.expanded && item.text && (
