@@ -40,9 +40,12 @@ class ResumeGenerator:
         if not analysis:
             raise ValueError("기업 분석 데이터를 찾을 수 없습니다.")
 
-        # 2. Semantic search for matching career entries
-        search_query = f"{question} {' '.join(analysis.get('keywords', []))}"
-        matched = await self._embedding.semantic_search(search_query, profile_id)
+        # 2. Semantic search for matching career entries (skip if embedding unavailable)
+        try:
+            search_query = f"{question} {' '.join(analysis.get('keywords', []))}"
+            matched = await self._embedding.semantic_search(search_query, profile_id)
+        except Exception:
+            matched = []
         matched_text = self._format_entries(matched)
 
         # 3. Render prompt

@@ -1,4 +1,4 @@
-"""Company analyzer — GPT-4o-mini for deep job posting analysis."""
+"""Company analyzer — Claude for deep job posting analysis."""
 
 import json
 
@@ -8,6 +8,23 @@ from config.settings import get_settings
 from core.llm_router import call_llm, TaskType
 from core.prompt_engine import get_prompt_engine
 from core.research import search_company_deep
+
+
+def _parse_json_response(raw: str) -> dict:
+    """Parse JSON from LLM response, handling markdown code fences."""
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+    # Strip markdown code fences: ```json ... ```
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start >= 0 and end > start:
+        try:
+            return json.loads(raw[start : end + 1])
+        except json.JSONDecodeError:
+            pass
+    return {}
 
 
 class CompanyAnalyzer:
@@ -45,12 +62,9 @@ class CompanyAnalyzer:
         }
         messages = self._prompt.render("company_analysis", variables)
 
-        # Call GPT-4o-mini with JSON mode
+        # Call Claude with JSON mode
         raw = await call_llm(messages, TaskType.company_analysis, json_mode=True)
-        try:
-            analysis = json.loads(raw)
-        except json.JSONDecodeError:
-            analysis = {}
+        analysis = _parse_json_response(raw)
 
         # Map v2 schema to DB columns
         talent_profile = analysis.get("talent_profile", {})
