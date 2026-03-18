@@ -58,10 +58,10 @@ TASK_MODEL_MAP: dict[TaskType, ModelConfig] = {
         Provider.claude, "claude-haiku-4-5-20251001", 4096
     ),
     TaskType.company_analysis: ModelConfig(
-        Provider.claude, "claude-haiku-4-5-20251001", 4096
+        Provider.claude, "claude-sonnet-4-6-20250514", 4096
     ),
     TaskType.file_parsing: ModelConfig(
-        Provider.claude, "claude-haiku-4-5-20251001", 4096
+        Provider.claude, "claude-sonnet-4-6-20250514", 4096
     ),
     TaskType.embedding: ModelConfig(
         Provider.openai, "text-embedding-3-small", 0
