@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,30 +17,15 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import type { CompanyAnalysis, EssayQuestion, Profile } from "@/lib/types";
-import {
-  Building2,
-  Plus,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  Check,
-  FileText,
-} from "lucide-react";
+import { Building2, Plus, Trash2, Loader2, Check, FileText } from "lucide-react";
 
-const STEPS = ["기업 선택", "문항 설정", "자소서 생성"] as const;
+const STEPS = ["기업 선택", "자소서 작성"] as const;
 
-interface QuestionRow {
+interface EssayItem {
   question: string;
   charLimit: number;
-}
-
-interface GeneratingItem {
-  question: string;
-  charLimit: number;
-  status: "waiting" | "generating" | "done";
-  text: string;
-  expanded: boolean;
+  answer: string;
+  status: "idle" | "generating";
 }
 
 export default function NewResumePage() {
@@ -57,15 +42,11 @@ export default function NewResumePage() {
   const [newUrl, setNewUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
 
-  // Step 2
-  const [questions, setQuestions] = useState<QuestionRow[]>([]);
+  // Step 2: 자소서 작성
+  const [essayItems, setEssayItems] = useState<EssayItem[]>([]);
   const [tone, setTone] = useState("전문적");
-
-  // Step 3
-  const [items, setItems] = useState<GeneratingItem[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [saving, setSaving] = useState(false);
-  const abortRef = useRef(false);
 
   // Load analyses on mount
   useEffect(() => {
@@ -92,14 +73,14 @@ export default function NewResumePage() {
         `/api/essay-questions?company=${encodeURIComponent(companyName)}`
       );
       if (qs.length > 0) {
-        setQuestions(
-          qs.map((q) => ({ question: q.question, charLimit: q.char_limit || 500 }))
+        setEssayItems(
+          qs.map((q) => ({ question: q.question, charLimit: q.char_limit || 500, answer: "", status: "idle" as const }))
         );
       } else {
-        setQuestions([{ question: "", charLimit: 500 }]);
+        setEssayItems([{ question: "", charLimit: 500, answer: "", status: "idle" }]);
       }
     } catch {
-      setQuestions([{ question: "", charLimit: 500 }]);
+      setEssayItems([{ question: "", charLimit: 500, answer: "", status: "idle" }]);
     }
   }, []);
 
@@ -140,88 +121,28 @@ export default function NewResumePage() {
     setStep(1);
   }
 
-  function addQuestion() {
-    setQuestions((prev) => [...prev, { question: "", charLimit: 500 }]);
+  function addEssayItem() {
+    setEssayItems((prev) => [...prev, { question: "", charLimit: 500, answer: "", status: "idle" }]);
   }
 
-  function removeQuestion(idx: number) {
-    setQuestions((prev) => prev.filter((_, i) => i !== idx));
+  function removeEssayItem(idx: number) {
+    setEssayItems((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  function updateQuestion(idx: number, field: keyof QuestionRow, value: string | number) {
-    setQuestions((prev) =>
-      prev.map((q, i) => (i === idx ? { ...q, [field]: value } : q))
+  function updateEssayItem(idx: number, field: keyof EssayItem, value: string | number) {
+    setEssayItems((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item))
     );
   }
 
-  async function startGeneration() {
-    const valid = questions.filter((q) => q.question.trim());
-    if (valid.length === 0) {
-      toast.error("최소 1개의 문항을 입력해주세요.");
-      return;
-    }
-    if (!profile) {
-      toast.error("프로필을 먼저 등록해주세요.");
-      return;
-    }
+  async function generateSingleItem(idx: number) {
+    const item = essayItems[idx];
+    if (!item.question.trim()) { toast.error("문항을 입력해주세요."); return; }
+    if (!profile) { toast.error("프로필을 먼저 등록해주세요."); return; }
     if (!selectedAnalysis) return;
 
-    const initial: GeneratingItem[] = valid.map((q) => ({
-      question: q.question,
-      charLimit: q.charLimit,
-      status: "waiting",
-      text: "",
-      expanded: false,
-    }));
-    setItems(initial);
-    setStep(2);
-    abortRef.current = false;
-
-    for (let i = 0; i < initial.length; i++) {
-      if (abortRef.current) break;
-      setItems((prev) =>
-        prev.map((it, idx) => (idx === i ? { ...it, status: "generating", expanded: true } : it))
-      );
-      try {
-        await api.stream(
-          "/api/resume/generate",
-          {
-            profile_id: profile.id,
-            company_analysis_id: selectedAnalysis.id,
-            question: initial[i].question,
-            char_limit: initial[i].charLimit,
-            tone,
-          },
-          (chunk) => {
-            setItems((prev) =>
-              prev.map((it, idx) => (idx === i ? { ...it, text: it.text + chunk } : it))
-            );
-          },
-          () => {
-            setItems((prev) =>
-              prev.map((it, idx) =>
-                idx === i ? { ...it, status: "done", expanded: true } : it
-              )
-            );
-          }
-        );
-      } catch (e) {
-        toast.error(`Q${i + 1} 생성 실패: ${e instanceof Error ? e.message : ""}`);
-        setItems((prev) =>
-          prev.map((it, idx) => (idx === i ? { ...it, status: "done" } : it))
-        );
-      }
-    }
-    toast.success("전체 생성 완료!");
-  }
-
-  async function regenerateItem(idx: number) {
-    if (!profile || !selectedAnalysis) return;
-    const target = items[idx];
-    setItems((prev) =>
-      prev.map((it, i) =>
-        i === idx ? { ...it, status: "generating", text: "", expanded: true } : it
-      )
+    setEssayItems((prev) =>
+      prev.map((it, i) => (i === idx ? { ...it, status: "generating", answer: "" } : it))
     );
     try {
       await api.stream(
@@ -229,32 +150,35 @@ export default function NewResumePage() {
         {
           profile_id: profile.id,
           company_analysis_id: selectedAnalysis.id,
-          question: target.question,
-          char_limit: target.charLimit,
+          question: item.question,
+          char_limit: item.charLimit,
           tone,
         },
         (chunk) => {
-          setItems((prev) =>
-            prev.map((it, i) => (i === idx ? { ...it, text: it.text + chunk } : it))
+          setEssayItems((prev) =>
+            prev.map((it, i) => (i === idx ? { ...it, answer: it.answer + chunk } : it))
           );
         },
         () => {
-          setItems((prev) =>
-            prev.map((it, i) => (i === idx ? { ...it, status: "done", expanded: true } : it))
+          setEssayItems((prev) =>
+            prev.map((it, i) => (i === idx ? { ...it, status: "idle" } : it))
           );
-          toast.success(`Q${idx + 1} 재생성 완료`);
+          toast.success(`Q${idx + 1} 생성 완료`);
         }
       );
     } catch (e) {
-      toast.error(`재생성 실패: ${e instanceof Error ? e.message : ""}`);
+      toast.error(`Q${idx + 1} 생성 실패: ${e instanceof Error ? e.message : ""}`);
+      setEssayItems((prev) =>
+        prev.map((it, i) => (i === idx ? { ...it, status: "idle" } : it))
+      );
     }
   }
 
   async function handleSaveAll() {
     if (!profile || !selectedAnalysis) return;
-    const doneItems = items.filter((it) => it.status === "done" && it.text);
-    if (doneItems.length === 0) {
-      toast.error("저장할 자소서가 없습니다.");
+    const filled = essayItems.filter((it) => it.question.trim() && it.answer.trim());
+    if (filled.length === 0) {
+      toast.error("저장할 자소서가 없습니다. 최소 1개 문항에 내용을 작성해주세요.");
       return;
     }
     setSaving(true);
@@ -264,11 +188,11 @@ export default function NewResumePage() {
         company_analysis_id: selectedAnalysis.id,
         title: `${selectedAnalysis.company_name} 자소서`,
       });
-      for (const item of doneItems) {
+      for (const item of filled) {
         await api.post("/api/resume/items", {
           resume_id: resume.id,
           question: item.question,
-          answer: item.text,
+          answer: item.answer,
           char_limit: item.charLimit,
           tone,
         });
@@ -282,16 +206,7 @@ export default function NewResumePage() {
     }
   }
 
-  function toggleExpand(idx: number) {
-    setItems((prev) =>
-      prev.map((it, i) => (i === idx ? { ...it, expanded: !it.expanded } : it))
-    );
-  }
-
-  const statusIcon = (s: GeneratingItem["status"]) =>
-    s === "done" ? <Check className="w-4 h-4 text-green-500" /> :
-    s === "generating" ? <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> :
-    <span className="w-4 h-4 text-muted-foreground text-xs">&#9203;</span>;
+  const hasAnyContent = essayItems.some((it) => it.answer.trim());
 
   return (
     <div className="space-y-6">
@@ -403,60 +318,19 @@ export default function NewResumePage() {
         </Card>
       )}
 
-      {/* Step 2: 문항 설정 */}
+      {/* Step 2: 자소서 작성 (문항 설정 + 생성/직접작성 통합) */}
       {step === 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" /> 문항 설정
-              <Badge variant="outline" className="ml-auto">{selectedAnalysis?.company_name}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {questions.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                이 기업의 기출문항이 없습니다. 직접 추가해 주세요.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {questions.map((q, i) => (
-                  <div key={i} className="flex gap-2 items-start">
-                    <span className="text-sm font-medium mt-2 shrink-0 w-8">Q{i + 1}.</span>
-                    <Textarea
-                      value={q.question}
-                      onChange={(e) => updateQuestion(i, "question", e.target.value)}
-                      rows={2}
-                      placeholder="자소서 문항을 입력하세요"
-                      className="flex-1"
-                    />
-                    <Input
-                      type="number"
-                      value={q.charLimit}
-                      onChange={(e) => updateQuestion(i, "charLimit", parseInt(e.target.value) || 0)}
-                      className="w-20"
-                      placeholder="글자수"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeQuestion(i)}
-                      disabled={questions.length === 1}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <Button variant="outline" size="sm" onClick={addQuestion} className="gap-1">
-              <Plus className="w-4 h-4" /> 문항 추가
-            </Button>
-
-            <div className="flex items-center gap-3 pt-2 border-t">
-              <span className="text-sm font-medium shrink-0">톤</span>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              <h2 className="font-semibold">자소서 작성</h2>
+              <Badge variant="outline">{selectedAnalysis?.company_name}</Badge>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">톤</span>
               <Select value={tone} onValueChange={(v) => v && setTone(v)}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-32 h-8 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -467,110 +341,92 @@ export default function NewResumePage() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            <div className="flex justify-between pt-2">
-              <Button variant="outline" onClick={() => setStep(0)}>
-                이전
-              </Button>
-              <Button
-                onClick={startGeneration}
-                disabled={questions.every((q) => !q.question.trim())}
-                className="btn-gradient border-0"
-              >
-                전체 생성 시작
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 3: 멀티 문항 순차 생성 */}
-      {step === 2 && (
-        <div className="space-y-4">
-          {items.map((item, i) => (
-            <Card key={i} className={item.status === "waiting" ? "opacity-50" : ""}>
-              <CardHeader
-                className="cursor-pointer py-3"
-                onClick={() => item.status === "done" && toggleExpand(i)}
-              >
+          {essayItems.map((item, i) => (
+            <Card key={i}>
+              <CardHeader className="py-3">
                 <div className="flex items-center gap-2">
-                  {statusIcon(item.status)}
-                  <span className="font-medium text-sm flex-1">
-                    Q{i + 1}. {item.question} ({item.charLimit}자)
-                  </span>
-                  {item.status === "done" && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); regenerateItem(i); }}
-                      >
-                        다시 생성
-                      </Button>
-                      {item.expanded ? (
-                        <ChevronUp className="w-4 h-4" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4" />
-                      )}
-                    </>
-                  )}
-                  {item.status === "generating" && (
-                    <span className="text-xs text-muted-foreground">{item.text.length}자</span>
-                  )}
+                  <span className="text-sm font-semibold shrink-0">Q{i + 1}.</span>
+                  <Textarea
+                    value={item.question}
+                    onChange={(e) => updateEssayItem(i, "question", e.target.value)}
+                    rows={1}
+                    placeholder="자소서 문항을 입력하세요"
+                    className="flex-1 text-sm min-h-[36px] resize-none"
+                  />
+                  <Input
+                    type="number"
+                    value={item.charLimit}
+                    onChange={(e) => updateEssayItem(i, "charLimit", parseInt(e.target.value) || 0)}
+                    className="w-20 h-9 text-sm"
+                    placeholder="글자수"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => removeEssayItem(i)}
+                    disabled={essayItems.length === 1}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </CardHeader>
-              {item.status === "generating" && (
-                <CardContent className="pt-0">
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed p-3 bg-muted rounded-md max-h-60 overflow-y-auto">
-                    {item.text || "생성 중..."}
+              <CardContent className="pt-0 space-y-2">
+                {item.status === "generating" ? (
+                  <div className="space-y-2">
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed p-3 bg-muted rounded-md max-h-60 overflow-y-auto">
+                      {item.answer || "생성 중..."}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{item.answer.length}자 생성 중...</p>
                   </div>
-                </CardContent>
-              )}
-              {item.status === "done" && item.expanded && (
-                <CardContent className="pt-0 space-y-2">
-                  <Textarea
-                    value={item.text}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setItems((prev) =>
-                        prev.map((it, idx) => (idx === i ? { ...it, text: val } : it))
-                      );
-                    }}
-                    rows={10}
-                    className="text-sm leading-relaxed"
-                  />
-                  <div className="flex items-center justify-between">
-                    <p className={`text-xs ${item.charLimit && item.text.length > item.charLimit ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                      {item.text.length}{item.charLimit ? `/${item.charLimit}` : ""}자
-                    </p>
-                  </div>
-                </CardContent>
-              )}
-              {item.status === "done" && !item.expanded && item.text && (
-                <CardContent className="pt-0">
-                  <p className="text-sm text-muted-foreground truncate">
-                    {item.text.slice(0, 100)}...
-                  </p>
-                </CardContent>
-              )}
+                ) : (
+                  <>
+                    <Textarea
+                      value={item.answer}
+                      onChange={(e) => updateEssayItem(i, "answer", e.target.value)}
+                      rows={item.answer ? 8 : 3}
+                      placeholder="직접 작성하거나 AI 생성 버튼을 눌러주세요"
+                      className="text-sm leading-relaxed"
+                    />
+                    <div className="flex items-center justify-between">
+                      <p className={`text-xs ${item.charLimit && item.answer.length > item.charLimit ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                        {item.answer.length}{item.charLimit ? `/${item.charLimit}` : ""}자
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => generateSingleItem(i)}
+                        disabled={!item.question.trim()}
+                        className="gap-1"
+                      >
+                        {item.answer ? "AI 재생성" : "AI 생성"}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
             </Card>
           ))}
 
-          {items.every((it) => it.status === "done") && (
-            <div className="flex justify-between pt-2">
-              <Button variant="outline" onClick={() => setStep(1)}>
-                문항 수정
-              </Button>
-              <Button
-                onClick={handleSaveAll}
-                disabled={saving || items.every((it) => !it.text)}
-                className="btn-gradient border-0 gap-1"
-              >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                전체 저장
-              </Button>
-            </div>
-          )}
+          <Button variant="outline" size="sm" onClick={addEssayItem} className="gap-1">
+            <Plus className="w-4 h-4" /> 문항 추가
+          </Button>
+
+          <div className="flex justify-between pt-2 border-t">
+            <Button variant="outline" onClick={() => setStep(0)}>
+              이전
+            </Button>
+            <Button
+              onClick={handleSaveAll}
+              disabled={saving || !hasAnyContent}
+              className="btn-gradient border-0 gap-1"
+            >
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              전체 저장
+            </Button>
+          </div>
         </div>
       )}
     </div>
