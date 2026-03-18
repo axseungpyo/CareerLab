@@ -133,6 +133,13 @@ async def update_item(item_id: str, data: ResumeItemUpdate):
     return gen.update_resume_item(item_id, data.model_dump(exclude_none=True))
 
 
+@router.delete("/items/{item_id}", status_code=204)
+async def delete_item(item_id: str):
+    """Delete a resume item."""
+    gen = ResumeGenerator()
+    gen._db.table("resume_items").delete().eq("id", item_id).execute()
+
+
 @router.get("/{resume_id}/items/versions")
 async def list_item_versions(resume_id: str, question: str):
     """Get all versions of a resume item with the same question."""
