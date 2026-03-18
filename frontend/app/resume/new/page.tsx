@@ -21,11 +21,21 @@ import { Building2, Plus, Trash2, Loader2, Check, FileText } from "lucide-react"
 
 const STEPS = ["기업 선택", "자소서 작성"] as const;
 
+interface EssayDraft {
+  text: string;
+  status: "idle" | "generating";
+}
+
 interface EssayItem {
   question: string;
   charLimit: number;
-  answer: string;
-  status: "idle" | "generating";
+  drafts: EssayDraft[];
+  selectedDraft: number;  // -1 = 직접작성
+  answer: string;         // 최종 편집 텍스트
+}
+
+function newItem(question = "", charLimit = 500): EssayItem {
+  return { question, charLimit, drafts: [], selectedDraft: -1, answer: "" };
 }
 
 export default function NewResumePage() {
@@ -73,14 +83,12 @@ export default function NewResumePage() {
         `/api/essay-questions?company=${encodeURIComponent(companyName)}`
       );
       if (qs.length > 0) {
-        setEssayItems(
-          qs.map((q) => ({ question: q.question, charLimit: q.char_limit || 500, answer: "", status: "idle" as const }))
-        );
+        setEssayItems(qs.map((q) => newItem(q.question, q.char_limit || 500)));
       } else {
-        setEssayItems([{ question: "", charLimit: 500, answer: "", status: "idle" }]);
+        setEssayItems([newItem()]);
       }
     } catch {
-      setEssayItems([{ question: "", charLimit: 500, answer: "", status: "idle" }]);
+      setEssayItems([newItem()]);
     }
   }, []);
 
@@ -122,28 +130,46 @@ export default function NewResumePage() {
   }
 
   function addEssayItem() {
-    setEssayItems((prev) => [...prev, { question: "", charLimit: 500, answer: "", status: "idle" }]);
+    setEssayItems((prev) => [...prev, newItem()]);
   }
 
   function removeEssayItem(idx: number) {
     setEssayItems((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  function updateEssayItem(idx: number, field: keyof EssayItem, value: string | number) {
+  function updateField(idx: number, field: "question" | "charLimit", value: string | number) {
     setEssayItems((prev) =>
       prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item))
     );
   }
 
-  async function generateSingleItem(idx: number) {
+  function selectDraft(itemIdx: number, draftIdx: number) {
+    setEssayItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== itemIdx) return item;
+        if (draftIdx === -1) return { ...item, selectedDraft: -1, answer: "" };
+        return { ...item, selectedDraft: draftIdx, answer: item.drafts[draftIdx]?.text || "" };
+      })
+    );
+  }
+
+  async function generateDraft(idx: number) {
     const item = essayItems[idx];
     if (!item.question.trim()) { toast.error("문항을 입력해주세요."); return; }
+    if (item.drafts.length >= 3) { toast.error("최대 3안까지 생성 가능합니다."); return; }
     if (!profile) { toast.error("프로필을 먼저 등록해주세요."); return; }
     if (!selectedAnalysis) return;
 
+    const draftIdx = item.drafts.length;
+    // Add new generating draft
     setEssayItems((prev) =>
-      prev.map((it, i) => (i === idx ? { ...it, status: "generating", answer: "" } : it))
+      prev.map((it, i) => {
+        if (i !== idx) return it;
+        const drafts = [...it.drafts, { text: "", status: "generating" as const }];
+        return { ...it, drafts, selectedDraft: draftIdx, answer: "" };
+      })
     );
+
     try {
       await api.stream(
         "/api/resume/generate",
@@ -156,20 +182,38 @@ export default function NewResumePage() {
         },
         (chunk) => {
           setEssayItems((prev) =>
-            prev.map((it, i) => (i === idx ? { ...it, answer: it.answer + chunk } : it))
+            prev.map((it, i) => {
+              if (i !== idx) return it;
+              const drafts = it.drafts.map((d, di) =>
+                di === draftIdx ? { ...d, text: d.text + chunk } : d
+              );
+              const answer = it.selectedDraft === draftIdx ? drafts[draftIdx].text : it.answer;
+              return { ...it, drafts, answer };
+            })
           );
         },
         () => {
           setEssayItems((prev) =>
-            prev.map((it, i) => (i === idx ? { ...it, status: "idle" } : it))
+            prev.map((it, i) => {
+              if (i !== idx) return it;
+              const drafts = it.drafts.map((d, di) =>
+                di === draftIdx ? { ...d, status: "idle" as const } : d
+              );
+              return { ...it, drafts, answer: drafts[draftIdx].text };
+            })
           );
-          toast.success(`Q${idx + 1} 생성 완료`);
+          toast.success(`Q${idx + 1} — ${draftIdx + 1}안 생성 완료`);
         }
       );
     } catch (e) {
-      toast.error(`Q${idx + 1} 생성 실패: ${e instanceof Error ? e.message : ""}`);
+      toast.error(`생성 실패: ${e instanceof Error ? e.message : ""}`);
+      // Remove failed draft
       setEssayItems((prev) =>
-        prev.map((it, i) => (i === idx ? { ...it, status: "idle" } : it))
+        prev.map((it, i) => {
+          if (i !== idx) return it;
+          const drafts = it.drafts.filter((_, di) => di !== draftIdx);
+          return { ...it, drafts, selectedDraft: drafts.length > 0 ? drafts.length - 1 : -1 };
+        })
       );
     }
   }
@@ -343,72 +387,125 @@ export default function NewResumePage() {
             </div>
           </div>
 
-          {essayItems.map((item, i) => (
-            <Card key={i}>
-              <CardHeader className="py-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold shrink-0">Q{i + 1}.</span>
-                  <Textarea
-                    value={item.question}
-                    onChange={(e) => updateEssayItem(i, "question", e.target.value)}
-                    rows={1}
-                    placeholder="자소서 문항을 입력하세요"
-                    className="flex-1 text-sm min-h-[36px] resize-none"
-                  />
-                  <Input
-                    type="number"
-                    value={item.charLimit}
-                    onChange={(e) => updateEssayItem(i, "charLimit", parseInt(e.target.value) || 0)}
-                    className="w-20 h-9 text-sm"
-                    placeholder="글자수"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 shrink-0"
-                    onClick={() => removeEssayItem(i)}
-                    disabled={essayItems.length === 1}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-2">
-                {item.status === "generating" ? (
-                  <div className="space-y-2">
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed p-3 bg-muted rounded-md max-h-60 overflow-y-auto">
-                      {item.answer || "생성 중..."}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{item.answer.length}자 생성 중...</p>
+          {essayItems.map((item, i) => {
+            const isGenerating = item.drafts.some((d) => d.status === "generating");
+            const canGenerate = item.drafts.length < 3 && !isGenerating && item.question.trim();
+            return (
+              <Card key={i}>
+                <CardHeader className="py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold shrink-0">Q{i + 1}.</span>
+                    <Textarea
+                      value={item.question}
+                      onChange={(e) => updateField(i, "question", e.target.value)}
+                      rows={1}
+                      placeholder="자소서 문항을 입력하세요"
+                      className="flex-1 text-sm min-h-[36px] resize-none"
+                    />
+                    <Input
+                      type="number"
+                      value={item.charLimit}
+                      onChange={(e) => updateField(i, "charLimit", parseInt(e.target.value) || 0)}
+                      className="w-20 h-9 text-sm"
+                      placeholder="글자수"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => removeEssayItem(i)}
+                      disabled={essayItems.length === 1}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                ) : (
-                  <>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-3">
+                  {/* Draft tabs */}
+                  {item.drafts.length > 0 && (
+                    <div className="flex gap-1.5 flex-wrap">
+                      {item.drafts.map((draft, di) => (
+                        <button
+                          key={di}
+                          onClick={() => selectDraft(i, di)}
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                            item.selectedDraft === di
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          }`}
+                        >
+                          {draft.status === "generating" ? (
+                            <span className="flex items-center gap-1">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              {di + 1}안
+                            </span>
+                          ) : (
+                            `${di + 1}안`
+                          )}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => selectDraft(i, -1)}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                          item.selectedDraft === -1
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        }`}
+                      >
+                        직접작성
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Generating preview */}
+                  {isGenerating && item.selectedDraft >= 0 && item.drafts[item.selectedDraft]?.status === "generating" && (
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed p-3 bg-muted rounded-md max-h-60 overflow-y-auto">
+                      {item.drafts[item.selectedDraft].text || "생성 중..."}
+                    </div>
+                  )}
+
+                  {/* Editable answer area (shown when not generating selected draft) */}
+                  {!(isGenerating && item.selectedDraft >= 0 && item.drafts[item.selectedDraft]?.status === "generating") && (
                     <Textarea
                       value={item.answer}
-                      onChange={(e) => updateEssayItem(i, "answer", e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEssayItems((prev) =>
+                          prev.map((it, idx) => (idx === i ? { ...it, answer: val, selectedDraft: -1 } : it))
+                        );
+                      }}
                       rows={item.answer ? 8 : 3}
                       placeholder="직접 작성하거나 AI 생성 버튼을 눌러주세요"
                       className="text-sm leading-relaxed"
                     />
-                    <div className="flex items-center justify-between">
-                      <p className={`text-xs ${item.charLimit && item.answer.length > item.charLimit ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                        {item.answer.length}{item.charLimit ? `/${item.charLimit}` : ""}자
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => generateSingleItem(i)}
-                        disabled={!item.question.trim()}
-                        className="gap-1"
-                      >
-                        {item.answer ? "AI 재생성" : "AI 생성"}
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  )}
+
+                  {/* Footer: char count + generate button */}
+                  <div className="flex items-center justify-between">
+                    <p className={`text-xs ${item.charLimit && item.answer.length > item.charLimit ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                      {item.answer.length}{item.charLimit ? `/${item.charLimit}` : ""}자
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => generateDraft(i)}
+                      disabled={!canGenerate}
+                      className="gap-1"
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : null}
+                      {item.drafts.length === 0
+                        ? "AI 생성"
+                        : item.drafts.length >= 3
+                          ? "3안 완료"
+                          : `${item.drafts.length + 1}안 생성`}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           <Button variant="outline" size="sm" onClick={addEssayItem} className="gap-1">
             <Plus className="w-4 h-4" /> 문항 추가
