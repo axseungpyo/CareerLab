@@ -14,10 +14,10 @@ import type { MilitaryService } from "@/lib/types";
 
 // 삼성 실측 옵션
 const MILITARY_STATUS = [
-  { value: "completed", label: "복무완료(병역필)" },
-  { value: "not_served", label: "미필" },
-  { value: "not_applicable", label: "비대상" },
-  { value: "exempted", label: "면제" },
+  { value: "필", label: "복무완료(병역필)" },
+  { value: "미필", label: "미필" },
+  { value: "비대상", label: "비대상" },
+  { value: "면제", label: "면제" },
 ];
 
 const DISCHARGE_TYPE = [
@@ -44,7 +44,7 @@ export default function MilitaryForm({ value, onChange }: MilitaryFormProps) {
     onChange({ ...value, ...patch });
   }
 
-  const showDetails = value.status === "completed";
+  const showDetails = value.status === "필";
 
   return (
     <Card>
