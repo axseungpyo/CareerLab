@@ -39,12 +39,23 @@ interface MilitaryFormProps {
   onChange: (v: MilitaryService) => void;
 }
 
+// 기존 영어 값 → 한글 마이그레이션
+const LEGACY_STATUS_MAP: Record<string, string> = {
+  completed: "복무완료",
+  not_served: "미필",
+  not_applicable: "비대상",
+  exempted: "면제",
+};
+
 export default function MilitaryForm({ value, onChange }: MilitaryFormProps) {
+  // 기존 영어 값이 남아있으면 자동 변환
+  const status = LEGACY_STATUS_MAP[value.status || ""] || value.status || "";
+
   function update(patch: Partial<MilitaryService>) {
     onChange({ ...value, ...patch });
   }
 
-  const showDetails = value.status === "복무완료";
+  const showDetails = status === "복무완료";
 
   return (
     <Card>
@@ -54,7 +65,7 @@ export default function MilitaryForm({ value, onChange }: MilitaryFormProps) {
       <CardContent className="space-y-4">
         <div className="space-y-1.5">
           <Label className="text-xs">병역사항</Label>
-          <Select value={value.status || ""} onValueChange={(v) => update({ status: v || undefined })}>
+          <Select value={status} onValueChange={(v) => update({ status: v || undefined })}>
             <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
             <SelectContent>
               {MILITARY_STATUS.map((o) => (
