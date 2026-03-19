@@ -105,6 +105,14 @@ async def get_resume(resume_id: str):
     return result
 
 
+@router.delete("/{resume_id}", status_code=204)
+async def delete_resume(resume_id: str):
+    """Delete a resume and all its items."""
+    gen = ResumeGenerator()
+    gen._db.table("resume_items").delete().eq("resume_id", resume_id).execute()
+    gen._db.table("resumes").delete().eq("id", resume_id).execute()
+
+
 @router.put("/{resume_id}/status", response_model=ResumeResponse)
 async def update_status(resume_id: str, data: StatusUpdate):
     gen = ResumeGenerator()

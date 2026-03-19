@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { FileText, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,19 @@ export default function ResumesPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  async function handleDelete(e: React.MouseEvent, id: string, title: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`"${title}" 자소서를 삭제하시겠습니까?`)) return;
+    try {
+      await api.delete(`/api/resume/${id}`);
+      setResumes((prev) => prev.filter((r) => r.id !== id));
+      toast.success("자소서가 삭제되었습니다.");
+    } catch {
+      toast.error("삭제에 실패했습니다.");
+    }
+  }
+
   if (loading) {
     return <div className="text-center py-12 text-muted-foreground">로딩 중...</div>;
   }
@@ -62,19 +76,21 @@ export default function ResumesPage() {
                 <CardHeader className="py-3">
                   <CardTitle className="text-base flex items-center justify-between">
                     {resume.title}
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
                       <Badge variant="secondary">
                         {STATUS_LABEL[resume.status] || resume.status}
                       </Badge>
                       {resume.result && (
-                        <Badge
-                          variant={
-                            resume.result === "pass" ? "default" : "secondary"
-                          }
-                        >
+                        <Badge variant={resume.result === "pass" ? "default" : "secondary"}>
                           {RESULT_LABEL[resume.result] || resume.result}
                         </Badge>
                       )}
+                      <button
+                        onClick={(e) => handleDelete(e, resume.id, resume.title)}
+                        className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </CardTitle>
                 </CardHeader>

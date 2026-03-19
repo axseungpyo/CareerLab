@@ -62,6 +62,7 @@ class ResumeItemResponse(BaseModel):
 
 
 class ResumeItemUpdate(BaseModel):
+    question: str | None = None
     answer: str | None = None
     tone: str | None = None
     version: int | None = None
