@@ -68,6 +68,11 @@ export default function ResumeDetailPage() {
   // Active version per question group
   const [activeVersion, setActiveVersion] = useState<Record<string, string>>({});
 
+  // Version labels (stored in localStorage)
+  const [versionLabels, setVersionLabels] = useState<Record<string, string>>({});
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
+  const [labelText, setLabelText] = useState("");
+
   // Add new item
   const [showAddForm, setShowAddForm] = useState(false);
   const [newQuestion, setNewQuestion] = useState("");
@@ -77,7 +82,25 @@ export default function ResumeDetailPage() {
 
   const resumeId = params.id as string;
 
-  useEffect(() => { loadResume(); }, [resumeId]);
+  useEffect(() => { loadResume(); loadLabels(); }, [resumeId]);
+
+  function loadLabels() {
+    try {
+      const stored = localStorage.getItem(`resume-labels-${resumeId}`);
+      if (stored) setVersionLabels(JSON.parse(stored));
+    } catch { /* ignore */ }
+  }
+
+  function saveLabel(itemId: string, label: string) {
+    const updated = { ...versionLabels, [itemId]: label };
+    setVersionLabels(updated);
+    localStorage.setItem(`resume-labels-${resumeId}`, JSON.stringify(updated));
+    setEditingLabel(null);
+  }
+
+  function getLabel(item: { id: string; version: number }) {
+    return versionLabels[item.id] || `${item.version}안`;
+  }
 
   async function loadResume() {
     try {
@@ -116,14 +139,19 @@ export default function ResumeDetailPage() {
     }
   }
 
-  async function handleDeleteItem(itemId: string, question: string) {
-    if (!confirm(`이 버전을 삭제하시겠습니까?`)) return;
+  async function handleDeleteItem(itemId: string) {
+    if (!itemId || !confirm(`이 버전을 삭제하시겠습니까?`)) return;
     try {
       await api.delete(`/api/resume/items/${itemId}`);
+      // Clean up label
+      const updated = { ...versionLabels };
+      delete updated[itemId];
+      setVersionLabels(updated);
+      localStorage.setItem(`resume-labels-${resumeId}`, JSON.stringify(updated));
       toast.success("삭제되었습니다.");
       loadResume();
-    } catch {
-      toast.error("삭제에 실패했습니다.");
+    } catch (e) {
+      toast.error("삭제에 실패했습니다: " + (e instanceof Error ? e.message : ""));
     }
   }
 
@@ -275,19 +303,33 @@ export default function ResumeDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {/* Version Tabs */}
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     {group.items.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => { setEditing(null); setActiveVersion((prev) => ({ ...prev, [group.question]: item.id })); }}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                          item.id === activeId
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground hover:bg-muted/80"
-                        }`}
-                      >
-                        {item.version}안
-                      </button>
+                      editingLabel === item.id ? (
+                        <input
+                          key={item.id}
+                          value={labelText}
+                          onChange={(e) => setLabelText(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveLabel(item.id, labelText); if (e.key === "Escape") setEditingLabel(null); }}
+                          onBlur={() => saveLabel(item.id, labelText)}
+                          className="px-2 py-0.5 text-xs font-medium rounded-md border border-primary bg-background w-20 outline-none"
+                          autoFocus
+                        />
+                      ) : (
+                        <button
+                          key={item.id}
+                          onClick={() => { setEditing(null); setEditingLabel(null); setActiveVersion((prev) => ({ ...prev, [group.question]: item.id })); }}
+                          onDoubleClick={(e) => { e.stopPropagation(); setEditingLabel(item.id); setLabelText(getLabel(item)); }}
+                          title="클릭: 선택 / 더블클릭: 라벨 수정"
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                            item.id === activeId
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          }`}
+                        >
+                          {getLabel(item)}
+                        </button>
+                      )
                     ))}
                     <button
                       onClick={() => handleAddVersion(group.question, group.charLimit, group.items)}
@@ -305,7 +347,7 @@ export default function ResumeDetailPage() {
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDeleteItem(activeItem.id, group.question)}>
+                          onClick={() => handleDeleteItem(activeItem.id)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </>
