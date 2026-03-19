@@ -46,6 +46,7 @@ class ResumeItemCreate(BaseModel):
     answer: str
     char_limit: int | None = None
     tone: str | None = None
+    version: int | None = None
     matched_entries: list[str] | None = None
 
 
