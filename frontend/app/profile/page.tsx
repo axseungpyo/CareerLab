@@ -85,8 +85,8 @@ export default function ProfilePage() {
         setNameHanja(p.name_hanja || ""); setPhoneSecondary(p.phone_secondary || "");
         const ms = p.military_service || {};
         if (ms.status) {
-          const legacyMap: Record<string, string> = { completed: "복무완료", not_served: "미필", not_applicable: "비대상", exempted: "면제" };
-          if (legacyMap[ms.status]) ms.status = legacyMap[ms.status];
+          const validValues = ["복무완료", "미필", "비대상", "면제"];
+          if (!validValues.includes(ms.status)) ms.status = undefined;
         }
         setMilitaryService(ms); setHobbies(p.hobbies || "");
         setSpecialties(p.specialties || "");
