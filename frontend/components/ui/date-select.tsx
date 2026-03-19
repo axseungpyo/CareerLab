@@ -101,7 +101,7 @@ export default function DateSelect({
 
       {/* Popup */}
       {open && (
-        <div className="absolute top-10 left-0 z-50 w-[260px] rounded-lg border bg-background shadow-lg p-3">
+        <div className="fixed z-[9999] w-[260px] rounded-lg border bg-background shadow-lg p-3" style={{ top: (ref.current?.getBoundingClientRect().bottom ?? 0) + 4, left: ref.current?.getBoundingClientRect().left ?? 0 }}>
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <button type="button" onClick={() => {
