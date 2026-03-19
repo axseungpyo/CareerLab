@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { CareerEntry } from "@/lib/types";
+import DateSelect from "@/components/ui/date-select";
 
 interface CareerEntryFormProps {
   profileId: string;
@@ -202,19 +203,8 @@ export default function CareerEntryForm({
                   />
                   현재 근무 중
                 </label>
-                <Input
-                  type="month"
-                  placeholder="시작일"
-                  value={periodStart}
-                  onChange={(e) => setPeriodStart(e.target.value)}
-                />
-                <Input
-                  type="month"
-                  placeholder="종료일"
-                  value={periodEnd}
-                  onChange={(e) => setPeriodEnd(e.target.value)}
-                  disabled={isCurrent}
-                />
+                <DateSelect value={periodStart} onChange={setPeriodStart} placeholder="시작" />
+                <DateSelect value={periodEnd} onChange={setPeriodEnd} placeholder={isCurrent ? "현재" : "종료"} />
               </div>
             </>
           )}
@@ -246,18 +236,8 @@ export default function CareerEntryForm({
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <Input
-                  type="month"
-                  placeholder="시작일"
-                  value={periodStart}
-                  onChange={(e) => setPeriodStart(e.target.value)}
-                />
-                <Input
-                  type="month"
-                  placeholder="종료일"
-                  value={periodEnd}
-                  onChange={(e) => setPeriodEnd(e.target.value)}
-                />
+                <DateSelect value={periodStart} onChange={setPeriodStart} placeholder="시작" />
+                <DateSelect value={periodEnd} onChange={setPeriodEnd} placeholder="종료" />
               </div>
             </>
           )}

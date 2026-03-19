@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import DateSelect from "@/components/ui/date-select";
 import {
   Select,
   SelectContent,
@@ -125,9 +126,18 @@ export default function AddItemDialog({
                   />
                   {field.placeholder}
                 </label>
+              ) : field.type === "date" ? (
+                <DateSelect
+                  mode="date"
+                  value={String(values[field.name] ?? "")}
+                  onChange={(v) =>
+                    setValues((prev) => ({ ...prev, [field.name]: v }))
+                  }
+                  placeholder={field.placeholder || "선택"}
+                />
               ) : (
                 <Input
-                  type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
+                  type={field.type === "number" ? "number" : "text"}
                   value={String(values[field.name] ?? "")}
                   onChange={(e) =>
                     setValues((prev) => ({

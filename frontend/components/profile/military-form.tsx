@@ -3,6 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import DateSelect from "@/components/ui/date-select";
 import {
   Select,
   SelectContent,
@@ -117,20 +118,16 @@ export default function MilitaryForm({ value, onChange }: MilitaryFormProps) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">복무 시작</Label>
-                <Input
-                  type="month"
+                <DateSelect
                   value={value.period_start || ""}
-                  onChange={(e) => update({ period_start: e.target.value || undefined })}
-                  className="text-sm"
+                  onChange={(v) => update({ period_start: v || undefined })}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">복무 종료</Label>
-                <Input
-                  type="month"
+                <DateSelect
                   value={value.period_end || ""}
-                  onChange={(e) => update({ period_end: e.target.value || undefined })}
-                  className="text-sm"
+                  onChange={(v) => update({ period_end: v || undefined })}
                 />
               </div>
             </div>

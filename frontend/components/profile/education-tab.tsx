@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import DateSelect from "@/components/ui/date-select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -108,12 +109,12 @@ export default function EducationTab({ education, setEducation, academicNote, se
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">시작 (YYYY-MM)</Label>
-              <Input type="month" value={item.period_start || ""} onChange={(e) => up(idx, { period_start: e.target.value })} className="text-sm" />
+              <Label className="text-xs">시작</Label>
+              <DateSelect value={item.period_start || ""} onChange={(v) => up(idx, { period_start: v })} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">종료 (YYYY-MM)</Label>
-              <Input type="month" value={item.period_end || ""} onChange={(e) => up(idx, { period_end: e.target.value })} className="text-sm" />
+              <Label className="text-xs">종료</Label>
+              <DateSelect value={item.period_end || ""} onChange={(v) => up(idx, { period_end: v })} />
             </div>
           </div>
           <div className="flex justify-end">
@@ -228,12 +229,12 @@ export default function EducationTab({ education, setEducation, academicNote, se
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">입학 (YYYY-MM)</Label>
-              <Input type="month" value={item.period_start || ""} onChange={(e) => up(idx, { period_start: e.target.value })} className="text-sm" />
+              <Label className="text-xs">입학</Label>
+              <DateSelect value={item.period_start || ""} onChange={(v) => up(idx, { period_start: v })} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">졸업 (YYYY-MM)</Label>
-              <Input type="month" value={item.period_end || ""} onChange={(e) => up(idx, { period_end: e.target.value })} className="text-sm" />
+              <Label className="text-xs">졸업</Label>
+              <DateSelect value={item.period_end || ""} onChange={(v) => up(idx, { period_end: v })} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">학번</Label>
