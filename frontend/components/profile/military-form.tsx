@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/select";
 import type { MilitaryService } from "@/lib/types";
 
-// Samsung 실측 옵션
+// 삼성 실측 옵션
 const MILITARY_STATUS = [
-  { value: "completed", label: "복무완료(병역필)/복무중(완료예정)" },
+  { value: "completed", label: "복무완료(병역필)" },
   { value: "not_served", label: "미필" },
   { value: "not_applicable", label: "비대상" },
   { value: "exempted", label: "면제" },
@@ -66,18 +66,19 @@ export default function MilitaryForm({ value, onChange }: MilitaryFormProps) {
 
         {showDetails && (
           <>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">병역구분</Label>
-                <Select value={value.discharge_type || ""} onValueChange={(v) => update({ discharge_type: v || undefined })}>
-                  <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
-                  <SelectContent>
-                    {DISCHARGE_TYPE.map((d) => (
-                      <SelectItem key={d} value={d}>{d}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">병역구분</Label>
+              <Select value={value.discharge_type || ""} onValueChange={(v) => update({ discharge_type: v || undefined })}>
+                <SelectTrigger className="text-sm w-full"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  {DISCHARGE_TYPE.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">군별</Label>
                 <Select value={value.branch || ""} onValueChange={(v) => update({ branch: v || undefined })}>
