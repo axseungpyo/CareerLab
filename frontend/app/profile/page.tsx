@@ -83,7 +83,12 @@ export default function ProfilePage() {
         setCareerGoal(p.career_goal || ""); setCoreValues(p.core_values || []);
         setEducation(p.education || []); setNameEn(p.name_en || "");
         setNameHanja(p.name_hanja || ""); setPhoneSecondary(p.phone_secondary || "");
-        setMilitaryService(p.military_service || {}); setHobbies(p.hobbies || "");
+        const ms = p.military_service || {};
+        if (ms.status) {
+          const legacyMap: Record<string, string> = { completed: "복무완료", not_served: "미필", not_applicable: "비대상", exempted: "면제" };
+          if (legacyMap[ms.status]) ms.status = legacyMap[ms.status];
+        }
+        setMilitaryService(ms); setHobbies(p.hobbies || "");
         setSpecialties(p.specialties || "");
         setRoleModel(p.role_model || ""); setRoleModelReason(p.role_model_reason || "");
         setGrowthBackground(p.growth_background || "");
