@@ -1,13 +1,8 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface DateSelectProps {
   value: string;
@@ -29,39 +24,70 @@ export default function DateSelect({
   className,
   disabled,
 }: DateSelectProps) {
+  const [yearOpen, setYearOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const parts = value ? value.split("-") : [];
   const year = parts[0] || "";
-  const rest = parts.slice(1).join("-"); // "MM" or "MM-DD"
+  const rest = parts.slice(1).join("-");
 
-  function handleYearChange(y: string) {
-    if (!y) { onChange(""); return; }
-    if (rest) {
-      onChange(`${y}-${rest}`);
-    } else {
-      onChange(mode === "month" ? `${y}-01` : `${y}-01-01`);
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setYearOpen(false);
+      }
     }
-  }
+    if (yearOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [yearOpen]);
 
-  function handleInputChange(v: string) {
-    onChange(v);
+  function selectYear(y: number) {
+    const yStr = String(y);
+    if (rest) {
+      onChange(`${yStr}-${rest}`);
+    } else {
+      onChange(mode === "month" ? `${yStr}-01` : `${yStr}-01-01`);
+    }
+    setYearOpen(false);
   }
 
   return (
     <div className={`flex gap-1.5 items-center ${className || ""}`}>
-      <Select value={year} onValueChange={(v) => handleYearChange(v || "")} disabled={disabled}>
-        <SelectTrigger className="text-sm h-9 w-[90px] shrink-0">
-          <SelectValue placeholder={placeholder || "년도"} />
-        </SelectTrigger>
-        <SelectContent className="max-h-60">
-          {YEARS.map((y) => (
-            <SelectItem key={y} value={String(y)}>{y}년</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {/* 연도 토글 버튼 */}
+      <div className="relative" ref={dropdownRef}>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setYearOpen(!yearOpen)}
+          className="flex items-center gap-1 h-9 px-3 rounded-md border bg-background text-sm hover:bg-muted transition-colors disabled:opacity-50 shrink-0"
+        >
+          {year ? `${year}년` : (placeholder || "년도")}
+          <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${yearOpen ? "rotate-180" : ""}`} />
+        </button>
+
+        {yearOpen && (
+          <div className="absolute top-10 left-0 z-50 w-[100px] max-h-60 overflow-y-auto rounded-md border bg-background shadow-lg py-1">
+            {YEARS.map((y) => (
+              <button
+                key={y}
+                type="button"
+                onClick={() => selectYear(y)}
+                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted transition-colors ${
+                  String(y) === year ? "bg-primary/10 font-medium text-primary" : ""
+                }`}
+              >
+                {y}년
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 네이티브 달력 입력 */}
       <Input
         type={mode}
         value={value}
-        onChange={(e) => handleInputChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         className="text-sm h-9 flex-1"
         disabled={disabled}
       />
