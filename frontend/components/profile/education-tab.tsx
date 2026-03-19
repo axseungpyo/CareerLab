@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, GraduationCap, School } from "lucide-react";
+import { Plus, Pencil, Trash2, GraduationCap, School, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import type { Education } from "@/lib/types";
 // ── Constants ──
 
 const HS_GRAD = ["졸업예정", "졸업", "수료", "중퇴", "검정고시"];
+const HS_TRACKS = ["일반계", "인문계", "자연계", "예체능계", "실업계(상업)", "실업계(공업)", "실업계(농업)", "특성화고", "마이스터고", "자율고", "과학고", "외국어고", "국제고", "예술고", "체육고"];
 const UNI_GRAD = ["졸업예정", "졸업", "수료", "중퇴"];
 const DEGREES = ["박사", "석사", "학사", "전문학사"];
 const DEGREE_TYPES = ["주전공", "부전공", "복수학위", "복수전공"];
@@ -71,6 +72,7 @@ interface EducationTabProps {
 
 export default function EducationTab({ education, setEducation, academicNote, setAcademicNote }: EducationTabProps) {
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [showExtra, setShowExtra] = useState(false);
   const highSchools = education.filter((e) => e.level === "high_school");
   const universities = education.filter((e) => e.level !== "high_school");
 
@@ -91,29 +93,72 @@ export default function EducationTab({ education, setEducation, academicNote, se
   }
   function gIdx(item: Education) { return education.indexOf(item); }
 
-  // ── High School ──
+  // ── High School View (summary) ──
 
-  function renderHS(item: Education, idx: number) {
+  function renderHSView(item: Education, idx: number) {
     return (
       <Card key={idx}>
-        <CardContent className="pt-5 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1.5 sm:col-span-2">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              {item.school || "학교명 미입력"}
+              {item.major_category && <Badge variant="outline" className="text-[10px]">{item.major_category}</Badge>}
+              {item.graduation_status && (
+                <Badge variant="secondary" className="text-[10px]">{item.graduation_status}</Badge>
+              )}
+            </span>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingIdx(idx)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeItem(idx)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground">
+            {[item.period_start, item.period_end].filter(Boolean).join(" ~ ") || "기간 미입력"}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── High School Edit ──
+
+  function renderHSEdit(item: Education, idx: number) {
+    return (
+      <Card key={idx} className="border-primary/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center justify-between">
+            고등학교 편집
+            <Button size="sm" variant="outline" onClick={() => setEditingIdx(null)}>완료</Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
               <Label className="text-xs">학교명</Label>
               <Input value={item.school} onChange={(e) => up(idx, { school: e.target.value })} placeholder="예: 한국고등학교" className="text-sm" />
             </div>
             <div className="space-y-1.5">
+              <Label className="text-xs">계열</Label>
+              <Sel value={item.major_category} onChange={(v) => up(idx, { major_category: v })} options={HS_TRACKS} placeholder="계열 선택" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1.5">
               <Label className="text-xs">졸업구분</Label>
               <Sel value={item.graduation_status} onChange={(v) => up(idx, { graduation_status: v })} options={HS_GRAD} />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">시작</Label>
+              <Label className="text-xs">입학</Label>
               <DateSelect value={item.period_start || ""} onChange={(v) => up(idx, { period_start: v })} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">종료</Label>
+              <Label className="text-xs">졸업</Label>
               <DateSelect value={item.period_end || ""} onChange={(v) => up(idx, { period_end: v })} />
             </div>
           </div>
@@ -163,90 +208,119 @@ export default function EducationTab({ education, setEducation, academicNote, se
     );
   }
 
-  // ── University edit ──
+  // ── University edit (reorganized) ──
 
   function renderUniEdit(item: Education, idx: number) {
+    const hasExtra = item.college || item.double_major || item.country || item.student_id || item.is_transfer;
+
     return (
       <Card key={idx} className="border-primary/50">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center justify-between">
             학력 편집
-            <Button size="sm" variant="outline" onClick={() => setEditingIdx(null)}>완료</Button>
+            <Button size="sm" variant="outline" onClick={() => { setEditingIdx(null); setShowExtra(false); }}>완료</Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs">학교명</Label>
-              <Input value={item.school} onChange={(e) => up(idx, { school: e.target.value })} placeholder="예: 아주대" list="uni-list" className="text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">학위</Label>
-              <Sel value={item.degree} onChange={(v) => up(idx, { degree: v || "" })} options={DEGREES} />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">전공</Label>
-              <Input value={item.major} onChange={(e) => up(idx, { major: e.target.value })} placeholder="예: 소프트웨어학과" className="text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">전공계열</Label>
-              <Sel value={item.major_category} onChange={(v) => up(idx, { major_category: v })} options={MAJOR_CATS} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">전공구분</Label>
-              <Sel value={item.degree_type} onChange={(v) => up(idx, { degree_type: v })} options={DEGREE_TYPES} />
+        <CardContent className="space-y-4">
+          {/* 기본 정보: 학교 + 학위 + 전공 */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2">기본 정보</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs">학교명</Label>
+                <Input value={item.school} onChange={(e) => up(idx, { school: e.target.value })} placeholder="예: 아주대" list="uni-list" className="text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">학위</Label>
+                <Sel value={item.degree} onChange={(v) => up(idx, { degree: v || "" })} options={DEGREES} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">졸업구분</Label>
+                <Sel value={item.graduation_status} onChange={(v) => up(idx, { graduation_status: v })} options={UNI_GRAD} />
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">졸업구분</Label>
-              <Sel value={item.graduation_status} onChange={(v) => up(idx, { graduation_status: v })} options={UNI_GRAD} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">학점 (GPA)</Label>
-              <Input value={item.gpa || ""} onChange={(e) => up(idx, { gpa: e.target.value })} placeholder="예: 3.8" className="text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">만점기준</Label>
-              <Sel value={item.gpa_scale} onChange={(v) => up(idx, { gpa_scale: v })} options={GPA_SCALES} />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">단과대학</Label>
-              <Input value={item.college || ""} onChange={(e) => up(idx, { college: e.target.value })} placeholder="예: 정보통신대학" className="text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">복수전공/부전공</Label>
-              <Input value={item.double_major || ""} onChange={(e) => up(idx, { double_major: e.target.value })} placeholder="예: 경영학과" className="text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">국가</Label>
-              <Input value={item.country || ""} onChange={(e) => up(idx, { country: e.target.value })} placeholder="예: 한국" className="text-sm" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">입학</Label>
-              <DateSelect value={item.period_start || ""} onChange={(v) => up(idx, { period_start: v })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">졸업</Label>
-              <DateSelect value={item.period_end || ""} onChange={(v) => up(idx, { period_end: v })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">학번</Label>
-              <Input value={item.student_id || ""} onChange={(e) => up(idx, { student_id: e.target.value })} placeholder="예: 20180001" className="text-sm" />
-            </div>
-            <div className="space-y-1.5 flex items-end">
-              <label className="flex items-center gap-1.5 text-xs cursor-pointer pb-2">
-                <input type="checkbox" checked={item.is_transfer || false} onChange={(e) => up(idx, { is_transfer: e.target.checked })} className="rounded" />
-                편입 여부
-              </label>
+
+          {/* 전공 + 학점 */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2">전공 / 학점</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">전공</Label>
+                <Input value={item.major} onChange={(e) => up(idx, { major: e.target.value })} placeholder="예: 소프트웨어학과" className="text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">전공구분</Label>
+                <Sel value={item.degree_type} onChange={(v) => up(idx, { degree_type: v })} options={DEGREE_TYPES} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">학점</Label>
+                <div className="flex gap-1.5">
+                  <Input value={item.gpa || ""} onChange={(e) => up(idx, { gpa: e.target.value })} placeholder="3.8" className="text-sm w-20" />
+                  <span className="flex items-center text-xs text-muted-foreground">/</span>
+                  <Sel value={item.gpa_scale} onChange={(v) => up(idx, { gpa_scale: v })} options={GPA_SCALES} placeholder="만점" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">전공계열</Label>
+                <Sel value={item.major_category} onChange={(v) => up(idx, { major_category: v })} options={MAJOR_CATS} />
+              </div>
             </div>
           </div>
+
+          {/* 기간 */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2">재학 기간</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">입학</Label>
+                <DateSelect value={item.period_start || ""} onChange={(v) => up(idx, { period_start: v })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">졸업</Label>
+                <DateSelect value={item.period_end || ""} onChange={(v) => up(idx, { period_end: v })} />
+              </div>
+            </div>
+          </div>
+
+          {/* 추가 정보 (접힘) */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowExtra((p) => !p)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showExtra || hasExtra ? "rotate-180" : ""}`} />
+              추가 정보 (단과대학, 복수전공, 편입 등)
+            </button>
+            {(showExtra || !!hasExtra) && (
+              <div className="mt-3 space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">단과대학</Label>
+                    <Input value={item.college || ""} onChange={(e) => up(idx, { college: e.target.value })} placeholder="예: 정보통신대학" className="text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">복수전공/부전공</Label>
+                    <Input value={item.double_major || ""} onChange={(e) => up(idx, { double_major: e.target.value })} placeholder="예: 경영학과" className="text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">국가</Label>
+                    <Input value={item.country || ""} onChange={(e) => up(idx, { country: e.target.value })} placeholder="예: 한국" className="text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">학번</Label>
+                    <Input value={item.student_id || ""} onChange={(e) => up(idx, { student_id: e.target.value })} placeholder="예: 20180001" className="text-sm" />
+                  </div>
+                </div>
+                <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                  <input type="checkbox" checked={item.is_transfer || false} onChange={(e) => up(idx, { is_transfer: e.target.checked })} className="rounded" />
+                  편입 여부
+                </label>
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end">
             <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeItem(idx)}>
               <Trash2 className="h-3.5 w-3.5 mr-1" />삭제
@@ -277,7 +351,13 @@ export default function EducationTab({ education, setEducation, academicNote, se
             </Button>
           )}
         </div>
-        {highSchools.map((item) => renderHS(item, gIdx(item)))}
+        {highSchools.map((item) => {
+          const idx = gIdx(item);
+          const isComplete = item.school && item.graduation_status;
+          return editingIdx === idx || !isComplete
+            ? renderHSEdit(item, idx)
+            : renderHSView(item, idx);
+        })}
       </div>
 
       <Separator />

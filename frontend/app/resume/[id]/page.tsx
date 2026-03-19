@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Loader2, Copy } from "lucide-react";
+import { Plus, Trash2, Pencil, Loader2, Copy, ChevronUp, ChevronDown, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 import type { ResumeItem } from "@/lib/types";
 
@@ -38,12 +44,36 @@ interface QuestionGroup {
   items: ResumeItem[];
 }
 
+function parseCharLimit(text: string): number | undefined {
+  // 영문 글자수 제외: "(영문작성 시 1400자)" 부분 제거 후 파싱
+  const cleaned = text.replace(/\(?\s*영문\s*작성\s*시?\s*\d[,\d]*\s*자\s*\)?/g, "");
+
+  // "최대 800자" 패턴 우선
+  const maxMatch = cleaned.match(/최대\s*(\d[,\d]*)\s*자/);
+  if (maxMatch) return parseInt(maxMatch[1].replace(",", ""), 10);
+
+  // "1500자 이내", "700자", "(800자)" 등
+  const patterns = [
+    /(\d{1,2},\d{3})\s*자/,      // 1,000자 / 1,500자
+    /(\d{3,4})\s*자/,            // 500자 / 800자 / 1500자
+    /글자\s*수[:\s]*(\d+)/,      // 글자수: 500
+  ];
+  for (const pat of patterns) {
+    const m = cleaned.match(pat);
+    if (m) return parseInt(m[1].replace(",", ""), 10);
+  }
+  return undefined;
+}
+
 function groupByQuestion(items: ResumeItem[]): QuestionGroup[] {
   const map = new Map<string, QuestionGroup>();
   for (const item of items) {
     const key = item.question;
     if (!map.has(key)) {
-      map.set(key, { question: key, charLimit: item.char_limit, items: [] });
+      // 문항 텍스트에 명시된 글자수를 우선, 없으면 DB 값 사용
+      const parsed = parseCharLimit(item.question);
+      const charLimit = parsed || item.char_limit;
+      map.set(key, { question: key, charLimit, items: [] });
     }
     map.get(key)!.items.push(item);
   }
@@ -72,6 +102,9 @@ export default function ResumeDetailPage() {
   const [versionLabels, setVersionLabels] = useState<Record<string, string>>({});
   const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const [labelText, setLabelText] = useState("");
+
+  // Question order
+  const [questionOrder, setQuestionOrder] = useState<string[]>([]);
 
   // Add new item
   const [showAddForm, setShowAddForm] = useState(false);
@@ -106,13 +139,21 @@ export default function ResumeDetailPage() {
     try {
       const r = await api.get<ResumeDetail>(`/api/resume/${resumeId}`);
       setResume(r);
-      // Set active version to latest for each question
       const groups = groupByQuestion(r.resume_items);
+      // Set active version to latest for each question
       const initial: Record<string, string> = {};
       for (const g of groups) {
         initial[g.question] = g.items[g.items.length - 1].id;
       }
       setActiveVersion(initial);
+      // Preserve existing order, append new questions
+      setQuestionOrder((prev) => {
+        const newQuestions = groups.map((g) => g.question);
+        if (prev.length === 0) return newQuestions;
+        const kept = prev.filter((q) => newQuestions.includes(q));
+        const added = newQuestions.filter((q) => !kept.includes(q));
+        return [...kept, ...added];
+      });
     } catch {
       toast.error("자소서를 불러올 수 없습니다.");
     } finally {
@@ -212,6 +253,16 @@ export default function ResumeDetailPage() {
     }
   }
 
+  function moveQuestion(index: number, direction: "up" | "down") {
+    setQuestionOrder((prev) => {
+      const next = [...prev];
+      const target = direction === "up" ? index - 1 : index + 1;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
   async function handleExport(format: string = "docx") {
     window.open(
       `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/resume/${resumeId}/export?format=${format}`,
@@ -222,7 +273,10 @@ export default function ResumeDetailPage() {
   if (loading) return <div className="text-center py-12 text-muted-foreground">로딩 중...</div>;
   if (!resume) return <div className="text-center py-12 text-muted-foreground">자소서를 찾을 수 없습니다.</div>;
 
-  const groups = groupByQuestion(resume.resume_items);
+  const rawGroups = groupByQuestion(resume.resume_items);
+  const groups = questionOrder.length > 0
+    ? questionOrder.map((q) => rawGroups.find((g) => g.question === q)).filter(Boolean) as QuestionGroup[]
+    : rawGroups;
 
   return (
     <div className="space-y-6">
@@ -236,14 +290,30 @@ export default function ResumeDetailPage() {
         </div>
         <div className="flex gap-2">
           <Select value={resume.status} onValueChange={(v) => v && handleStatusChange(v)}>
-            <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-28">
+              <SelectValue>
+                {{ draft: "작성중", final: "완성", submitted: "제출" }[resume.status] || resume.status}
+              </SelectValue>
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="draft">작성중</SelectItem>
               <SelectItem value="final">완성</SelectItem>
               <SelectItem value="submitted">제출</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={() => handleExport("docx")}>내보내기</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex items-center justify-center gap-1.5 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
+              <Download className="h-4 w-4" />내보내기
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport("docx")}>Word (.docx)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("pdf")}>PDF (.pdf)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("html")}>HTML (.html)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("md")}>Markdown (.md)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("txt")}>텍스트 (.txt)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("json")}>JSON (.json)</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" onClick={() => router.push(`/review?resume_id=${resumeId}`)}>첨삭 분석</Button>
         </div>
       </div>
@@ -292,12 +362,26 @@ export default function ResumeDetailPage() {
                         {gi + 1}. {group.question}
                       </span>
                     )}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {group.charLimit && (
-                        <Badge variant="outline" className="text-[10px]">
-                          {(editing === activeItem?.id ? editText : activeItem?.answer || "").length}/{group.charLimit}자
-                        </Badge>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {groups.length > 1 && (
+                        <div className="flex flex-col -space-y-1 mr-1">
+                          <Button variant="ghost" size="icon" className="h-5 w-5" disabled={gi === 0} onClick={() => moveQuestion(gi, "up")}>
+                            <ChevronUp className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-5 w-5" disabled={gi === groups.length - 1} onClick={() => moveQuestion(gi, "down")}>
+                            <ChevronDown className="h-3 w-3" />
+                          </Button>
+                        </div>
                       )}
+                      {group.charLimit != null && group.charLimit > 0 && (() => {
+                        const currentLen = (editing === activeItem?.id ? editText : activeItem?.answer || "").length;
+                        const over = currentLen > group.charLimit;
+                        return (
+                          <Badge variant="outline" className={`text-[10px] ${over ? "border-destructive text-destructive" : ""}`}>
+                            {currentLen}/{group.charLimit}자
+                          </Badge>
+                        );
+                      })()}
                     </div>
                   </CardTitle>
                 </CardHeader>
@@ -363,13 +447,25 @@ export default function ResumeDetailPage() {
                         rows={10}
                         className="text-sm leading-relaxed"
                       />
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => handleSaveItem(activeItem.id)}>저장</Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditing(null)}>취소</Button>
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => handleSaveItem(activeItem.id)}>저장</Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditing(null)}>취소</Button>
+                        </div>
+                        <p className={`text-xs ${group.charLimit && editText.length > group.charLimit ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                          {editText.length}{group.charLimit ? `/${group.charLimit}` : ""}자
+                        </p>
                       </div>
                     </div>
                   ) : activeItem ? (
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{activeItem.answer}</p>
+                    <div>
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{activeItem.answer}</p>
+                      {group.charLimit != null && group.charLimit > 0 && (
+                        <p className={`text-xs mt-2 text-right ${activeItem.answer.length > group.charLimit ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                          {activeItem.answer.length}/{group.charLimit}자
+                        </p>
+                      )}
+                    </div>
                   ) : null}
                 </CardContent>
               </Card>

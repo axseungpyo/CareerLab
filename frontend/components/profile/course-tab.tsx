@@ -43,7 +43,7 @@ export default function CourseTab({ profileId, courses, setCourses, education }:
   const fields: FieldConfig[] = [
     { name: "school_name", label: "학교명", type: "text", required: true, defaultValue: schoolName, placeholder: "예: 아주대" },
     { name: "course_name", label: "과목명", type: "text", required: true, placeholder: "예: 자료구조" },
-    { name: "category", label: "구분", type: "select", required: true, options: CATEGORY_OPTIONS, defaultValue: "major_elective" },
+    { name: "category", label: "구분", type: "select", required: true, options: CATEGORY_OPTIONS },
     { name: "credits", label: "학점", type: "number", placeholder: "3" },
     { name: "year", label: "이수년도", type: "number", placeholder: "2024" },
     { name: "semester", label: "학기", type: "select", options: SEMESTER_OPTIONS },

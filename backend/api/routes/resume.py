@@ -159,7 +159,7 @@ async def list_item_versions(resume_id: str, question: str):
 
 @router.get("/{resume_id}/export")
 async def export_resume(resume_id: str, format: str = "docx"):
-    """Export resume as DOCX or PDF file."""
+    """Export resume as DOCX, PDF, Markdown, or plain text."""
     from fastapi.responses import Response
     from modules.resume.exporter import ResumeExporter
 
@@ -167,12 +167,39 @@ async def export_resume(resume_id: str, format: str = "docx"):
     try:
         if format == "pdf":
             pdf_bytes = exporter.to_pdf(resume_id)
-            # Check if weasyprint returned PDF or HTML fallback
             is_pdf = pdf_bytes[:4] == b"%PDF"
             return Response(
                 content=pdf_bytes,
                 media_type="application/pdf" if is_pdf else "text/html; charset=utf-8",
                 headers={"Content-Disposition": f'attachment; filename="resume_{resume_id}.{"pdf" if is_pdf else "html"}"'},
+            )
+        elif format == "md":
+            md_bytes = exporter.to_md(resume_id)
+            return Response(
+                content=md_bytes,
+                media_type="text/markdown; charset=utf-8",
+                headers={"Content-Disposition": f'attachment; filename="resume_{resume_id}.md"'},
+            )
+        elif format == "txt":
+            txt_bytes = exporter.to_txt(resume_id)
+            return Response(
+                content=txt_bytes,
+                media_type="text/plain; charset=utf-8",
+                headers={"Content-Disposition": f'attachment; filename="resume_{resume_id}.txt"'},
+            )
+        elif format == "html":
+            html_bytes = exporter.to_html(resume_id)
+            return Response(
+                content=html_bytes,
+                media_type="text/html; charset=utf-8",
+                headers={"Content-Disposition": f'attachment; filename="resume_{resume_id}.html"'},
+            )
+        elif format == "json":
+            json_bytes = exporter.to_json(resume_id)
+            return Response(
+                content=json_bytes,
+                media_type="application/json; charset=utf-8",
+                headers={"Content-Disposition": f'attachment; filename="resume_{resume_id}.json"'},
             )
         else:
             docx_bytes = exporter.to_docx(resume_id)

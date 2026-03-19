@@ -88,7 +88,9 @@ export default function InterviewPage() {
           <div className="flex-1">
             <Select value={selectedResume} onValueChange={(v) => v && handleSelectResume(v)}>
               <SelectTrigger>
-                <SelectValue placeholder="자소서를 선택하세요" />
+                <SelectValue placeholder="자소서를 선택하세요">
+                  {resumes.find((r) => r.id === selectedResume)?.title || "자소서를 선택하세요"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {resumes.map((r) => (

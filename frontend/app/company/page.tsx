@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Building2, FileText, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ export default function CompanyListPage() {
   const [analyses, setAnalyses] = useState<CompanyAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     loadAnalyses();
@@ -118,70 +120,64 @@ export default function CompanyListPage() {
       {filtered.length > 0 && (
         <div className="space-y-3">
           {filtered.map((a) => (
-            <Link key={a.id} href={`/company/${a.id}`}>
-              <Card className="hover:border-primary/30 transition-colors cursor-pointer mb-3">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">
-                        {a.company_name}
-                      </CardTitle>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(a.analyzed_at).toLocaleDateString("ko-KR", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Link
-                        href={`/resume/new?analysisId=${a.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                          aria-label="자소서 생성"
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => handleDelete(e, a.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {a.keywords && a.keywords.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {a.keywords.slice(0, 5).map((kw, i) => (
-                        <Badge key={i} variant="secondary" className="text-xs">
-                          {kw}
-                        </Badge>
-                      ))}
-                      {a.keywords.length > 5 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{a.keywords.length - 5}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  {a.requirements && a.requirements.length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      요구사항 {a.requirements.length}개
+            <Card key={a.id} className="hover:border-primary/30 transition-colors cursor-pointer mb-3" onClick={() => router.push(`/company/${a.id}`)}>
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-lg">
+                      {a.company_name}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(a.analyzed_at).toLocaleDateString("ko-KR", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
                     </p>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      aria-label="자소서 생성"
+                      onClick={(e) => { e.stopPropagation(); router.push(`/resume/new?analysisId=${a.id}`); }}
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => handleDelete(e, a.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {a.keywords && a.keywords.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {a.keywords.slice(0, 5).map((kw, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {kw}
+                      </Badge>
+                    ))}
+                    {a.keywords.length > 5 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{a.keywords.length - 5}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                {a.requirements && a.requirements.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    요구사항 {a.requirements.length}개
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

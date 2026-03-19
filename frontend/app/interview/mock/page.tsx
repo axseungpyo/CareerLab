@@ -126,7 +126,9 @@ export default function MockInterviewPage() {
           <CardContent className="space-y-4">
             <Select value={mode} onValueChange={(v) => v && setMode(v)}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>
+                  {{ normal: "일반 면접", pressure: "압박 면접", pt: "PT 면접" }[mode] || "면접 모드 선택"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="normal">일반 면접</SelectItem>

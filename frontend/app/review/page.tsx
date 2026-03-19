@@ -131,7 +131,9 @@ export default function ReviewPage() {
             <div>
               <Select value={selectedResume} onValueChange={(v) => { if (v) { setSelectedResume(v); setSelectedItem(""); setReport(null); } }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="자소서 선택" />
+                  <SelectValue placeholder="자소서 선택">
+                    {resumes.find((r) => r.id === selectedResume)?.title || "자소서 선택"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {resumes.map((r) => (
@@ -145,7 +147,9 @@ export default function ReviewPage() {
             <div>
               <Select value={selectedItem} onValueChange={(v) => { if (v) { setSelectedItem(v); setReport(null); } }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="문항 선택" />
+                  <SelectValue placeholder="문항 선택">
+                    {(() => { const idx = items.findIndex((it) => it.id === selectedItem); return idx >= 0 ? `${idx + 1}. ${items[idx].question.slice(0, 30)}...` : "문항 선택"; })()}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {items.map((item, i) => (

@@ -34,8 +34,30 @@ interface EssayItem {
   answer: string;         // 최종 편집 텍스트
 }
 
+function parseCharLimitFromText(text: string): number | undefined {
+  // 영문 글자수 제외: "(영문작성 시 1400자)" 부분 제거 후 파싱
+  const cleaned = text.replace(/\(?\s*영문\s*작성\s*시?\s*\d[,\d]*\s*자\s*\)?/g, "");
+
+  // "최대 800자" 패턴 우선
+  const maxMatch = cleaned.match(/최대\s*(\d[,\d]*)\s*자/);
+  if (maxMatch) return parseInt(maxMatch[1].replace(",", ""), 10);
+
+  // "1500자 이내", "700자", "(800자)" 등
+  const patterns = [
+    /(\d{1,2},\d{3})\s*자/,      // 1,000자 / 1,500자
+    /(\d{3,4})\s*자/,            // 500자 / 800자 / 1500자
+    /글자\s*수[:\s]*(\d+)/,      // 글자수: 500
+  ];
+  for (const pat of patterns) {
+    const m = cleaned.match(pat);
+    if (m) return parseInt(m[1].replace(",", ""), 10);
+  }
+  return undefined;
+}
+
 function newItem(question = "", charLimit = 500): EssayItem {
-  return { question, charLimit, drafts: [], selectedDraft: -1, answer: "" };
+  const parsed = question ? parseCharLimitFromText(question) : undefined;
+  return { question, charLimit: parsed || charLimit, drafts: [], selectedDraft: -1, answer: "" };
 }
 
 export default function NewResumePage() {
@@ -83,7 +105,10 @@ export default function NewResumePage() {
         `/api/essay-questions?company=${encodeURIComponent(companyName)}`
       );
       if (qs.length > 0) {
-        setEssayItems(qs.map((q) => newItem(q.question, q.char_limit || 500)));
+        setEssayItems(qs.map((q) => {
+          const parsed = parseCharLimitFromText(q.question);
+          return newItem(q.question, q.char_limit || parsed || 500);
+        }));
       } else {
         setEssayItems([newItem()]);
       }
@@ -139,7 +164,16 @@ export default function NewResumePage() {
 
   function updateField(idx: number, field: "question" | "charLimit", value: string | number) {
     setEssayItems((prev) =>
-      prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item))
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        const updated = { ...item, [field]: value };
+        // 문항 텍스트 변경 시 글자수 자동 감지
+        if (field === "question" && typeof value === "string") {
+          const parsed = parseCharLimitFromText(value);
+          if (parsed) updated.charLimit = parsed;
+        }
+        return updated;
+      })
     );
   }
 

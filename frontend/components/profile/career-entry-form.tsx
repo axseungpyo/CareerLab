@@ -30,7 +30,7 @@ export default function CareerEntryForm({
   onSubmit,
   onCancel,
 }: CareerEntryFormProps) {
-  const [entryType, setEntryType] = useState("career");
+  const [entryType, setEntryType] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [company, setCompany] = useState("");
@@ -126,14 +126,14 @@ export default function CareerEntryForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div className="space-y-1.5">
               <Label>유형</Label>
               <Select
                 value={entryType}
                 onValueChange={(v) => v && setEntryType(v)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="선택" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="career">경력</SelectItem>
@@ -145,7 +145,7 @@ export default function CareerEntryForm({
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>제목 *</Label>
               <Input
                 value={title}
@@ -158,30 +158,42 @@ export default function CareerEntryForm({
 
           {(entryType === "career" || entryType === "project") && (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <Input
-                  placeholder="회사명"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                />
-                <Input
-                  placeholder="직위"
-                  value={position}
-                  onChange={(e) => setPosition(e.target.value)}
-                />
-                <Input
-                  placeholder="부서명"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                />
-                <Input
-                  placeholder="소재지"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">회사명</Label>
+                  <Input
+                    placeholder="예: 삼성전자"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">직위</Label>
+                  <Input
+                    placeholder="예: 사원"
+                    value={position}
+                    onChange={(e) => setPosition(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">부서명</Label>
+                  <Input
+                    placeholder="예: 개발팀"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">소재지</Label>
+                  <Input
+                    placeholder="예: 서울"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
-                <div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1.5">
                   <Label className="text-xs">근무형태</Label>
                   <Select value={employmentType} onValueChange={(v) => setEmploymentType(v || "")}>
                     <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
@@ -194,37 +206,52 @@ export default function CareerEntryForm({
                     </SelectContent>
                   </Select>
                 </div>
-                <label className="flex items-center gap-2 text-sm cursor-pointer h-9">
-                  <input
-                    type="checkbox"
-                    checked={isCurrent}
-                    onChange={(e) => setIsCurrent(e.target.checked)}
-                    className="h-4 w-4 rounded border-input"
-                  />
-                  현재 근무 중
-                </label>
-                <DateSelect value={periodStart} onChange={setPeriodStart} placeholder="시작" />
-                <DateSelect value={periodEnd} onChange={setPeriodEnd} placeholder={isCurrent ? "현재" : "종료"} />
+                <div className="space-y-1.5">
+                  <Label className="text-xs">시작일</Label>
+                  <DateSelect value={periodStart} onChange={setPeriodStart} placeholder="시작" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">종료일</Label>
+                  <DateSelect value={periodEnd} onChange={setPeriodEnd} placeholder={isCurrent ? "현재" : "종료"} />
+                </div>
+                <div className="flex items-end pb-1">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isCurrent}
+                      onChange={(e) => setIsCurrent(e.target.checked)}
+                      className="h-4 w-4 rounded border-input"
+                    />
+                    현재 근무 중
+                  </label>
+                </div>
               </div>
             </>
           )}
 
           {(entryType === "activity" || entryType === "training") && (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                <Input
-                  placeholder="기관/단체명"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                />
-                <Input
-                  placeholder="역할/직위"
-                  value={position}
-                  onChange={(e) => setPosition(e.target.value)}
-                />
-                <div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">기관/단체명</Label>
+                  <Input
+                    placeholder="예: 대한적십자사"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">역할/직위</Label>
+                  <Input
+                    placeholder="예: 팀장"
+                    value={position}
+                    onChange={(e) => setPosition(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">활동구분</Label>
                   <Select value={activityCategory} onValueChange={(v) => setActivityCategory(v || "")}>
-                    <SelectTrigger className="text-sm"><SelectValue placeholder="활동구분" /></SelectTrigger>
+                    <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="온라인활동">온라인활동</SelectItem>
                       <SelectItem value="교외활동">교외활동</SelectItem>
@@ -235,14 +262,20 @@ export default function CareerEntryForm({
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <DateSelect value={periodStart} onChange={setPeriodStart} placeholder="시작" />
-                <DateSelect value={periodEnd} onChange={setPeriodEnd} placeholder="종료" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">시작일</Label>
+                  <DateSelect value={periodStart} onChange={setPeriodStart} placeholder="시작" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">종료일</Label>
+                  <DateSelect value={periodEnd} onChange={setPeriodEnd} placeholder="종료" />
+                </div>
               </div>
             </>
           )}
 
-          <div>
+          <div className="space-y-1.5">
             <Label>상세 내용 *</Label>
             <Textarea
               value={content}
@@ -297,7 +330,7 @@ export default function CareerEntryForm({
             )}
           </div>
 
-          <div>
+          <div className="space-y-1.5">
             <Label>태그 (쉼표로 구분)</Label>
             <Input
               value={tags}
@@ -306,7 +339,7 @@ export default function CareerEntryForm({
             />
           </div>
 
-          <Button type="submit" disabled={loading || !title || !content}>
+          <Button type="submit" disabled={loading || !entryType || !title || !content}>
             {loading ? "저장 중..." : isEdit ? "수정" : "추가"}
           </Button>
         </form>

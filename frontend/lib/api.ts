@@ -21,6 +21,7 @@ async function request<T>(
     throw new Error(error.detail || `API 요청 실패: ${response.status}`);
   }
 
+  if (response.status === 204) return undefined as T;
   return response.json();
 }
 

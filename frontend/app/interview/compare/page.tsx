@@ -93,7 +93,9 @@ export default function InterviewComparePage() {
           <div>
             <Select value={selectedResume} onValueChange={(v) => v && handleResumeSelect(v)}>
               <SelectTrigger>
-                <SelectValue placeholder="자소서 선택" />
+                <SelectValue placeholder="자소서 선택">
+                  {resumes.find((r) => r.id === selectedResume)?.title || "자소서 선택"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {resumes.map((r) => (
@@ -108,7 +110,9 @@ export default function InterviewComparePage() {
                 <p className="text-xs text-muted-foreground mb-1">세션 A</p>
                 <Select value={sessionA} onValueChange={(v) => v && setSessionA(v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="세션 A 선택" />
+                    <SelectValue placeholder="세션 A 선택">
+                      {(() => { const s = sessions.find((s) => s.id === sessionA); return s ? `${new Date(s.created_at).toLocaleDateString("ko-KR")} (${MODE_LABELS[s.mode]}) — ${s.overall_score}점` : "세션 A 선택"; })()}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {sessions.filter((s) => s.id !== sessionB).map((s) => (
@@ -123,7 +127,9 @@ export default function InterviewComparePage() {
                 <p className="text-xs text-muted-foreground mb-1">세션 B</p>
                 <Select value={sessionB} onValueChange={(v) => v && setSessionB(v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="세션 B 선택" />
+                    <SelectValue placeholder="세션 B 선택">
+                      {(() => { const s = sessions.find((s) => s.id === sessionB); return s ? `${new Date(s.created_at).toLocaleDateString("ko-KR")} (${MODE_LABELS[s.mode]}) — ${s.overall_score}점` : "세션 B 선택"; })()}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {sessions.filter((s) => s.id !== sessionA).map((s) => (
