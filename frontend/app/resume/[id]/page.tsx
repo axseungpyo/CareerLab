@@ -127,8 +127,8 @@ export default function ResumeDetailPage() {
     }
   }
 
-  async function handleAddVersion(question: string, charLimit: number | undefined, currentCount: number) {
-    if (currentCount >= 3) { toast.error("최대 3개 버전까지 추가 가능합니다."); return; }
+  async function handleAddVersion(question: string, charLimit: number | undefined, items: ResumeItem[]) {
+    const maxVersion = items.reduce((max, it) => Math.max(max, it.version), 0);
     setAddSaving(true);
     try {
       await api.post("/api/resume/items", {
@@ -136,14 +136,28 @@ export default function ResumeDetailPage() {
         question,
         answer: "(작성 예정)",
         char_limit: charLimit,
-        version: currentCount + 1,
+        version: maxVersion + 1,
       });
-      toast.success(`${currentCount + 1}안이 추가되었습니다.`);
+      toast.success(`${maxVersion + 1}안이 추가되었습니다.`);
       loadResume();
     } catch {
       toast.error("버전 추가에 실패했습니다.");
     } finally {
       setAddSaving(false);
+    }
+  }
+
+  async function handleRenameQuestion(group: QuestionGroup, newQuestion: string) {
+    if (!newQuestion.trim() || newQuestion === group.question) { setEditing(null); return; }
+    try {
+      for (const item of group.items) {
+        await api.put(`/api/resume/items/${item.id}`, { question: newQuestion });
+      }
+      toast.success("문항 제목이 변경되었습니다.");
+      setEditing(null);
+      loadResume();
+    } catch {
+      toast.error("제목 변경에 실패했습니다.");
     }
   }
 
@@ -223,25 +237,37 @@ export default function ResumeDetailPage() {
           {groups.map((group, gi) => {
             const activeId = activeVersion[group.question];
             const activeItem = group.items.find((it) => it.id === activeId) || group.items[0];
-            const isEditing = editing === activeItem?.id;
+            // editing === activeItem?.id → 내용 수정, editing === `title-${gi}` → 제목 수정
 
             return (
               <Card key={gi}>
                 <CardHeader className="py-3">
                   <CardTitle className="text-sm flex items-center justify-between gap-2">
-                    {isEditing ? (
-                      <Input
-                        value={editQuestion}
-                        onChange={(e) => setEditQuestion(e.target.value)}
-                        className="flex-1 text-sm font-semibold"
-                      />
+                    {editing === `title-${gi}` ? (
+                      <div className="flex items-center gap-1.5 flex-1">
+                        <Input
+                          value={editQuestion}
+                          onChange={(e) => setEditQuestion(e.target.value)}
+                          className="flex-1 text-sm font-semibold h-8"
+                          onKeyDown={(e) => { if (e.key === "Enter") handleRenameQuestion(group, editQuestion); }}
+                          autoFocus
+                        />
+                        <Button size="sm" className="h-7 text-xs" onClick={() => handleRenameQuestion(group, editQuestion)}>확인</Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(null)}>취소</Button>
+                      </div>
                     ) : (
-                      <span className="flex-1">{gi + 1}. {group.question}</span>
+                      <span
+                        className="flex-1 cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => { setEditing(`title-${gi}`); setEditQuestion(group.question); }}
+                        title="클릭하여 제목 수정"
+                      >
+                        {gi + 1}. {group.question}
+                      </span>
                     )}
                     <div className="flex items-center gap-1.5 shrink-0">
                       {group.charLimit && (
                         <Badge variant="outline" className="text-[10px]">
-                          {(isEditing ? editText : activeItem?.answer || "").length}/{group.charLimit}자
+                          {(editing === activeItem?.id ? editText : activeItem?.answer || "").length}/{group.charLimit}자
                         </Badge>
                       )}
                     </div>
@@ -263,17 +289,16 @@ export default function ResumeDetailPage() {
                         {item.version}안
                       </button>
                     ))}
-                    {group.items.length < 3 && (
-                      <button
-                        onClick={() => handleAddVersion(group.question, group.charLimit, group.items.length)}
-                        disabled={addSaving}
-                        className="px-2 py-1 text-xs text-muted-foreground rounded-md border border-dashed hover:border-primary hover:text-primary transition-colors"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleAddVersion(group.question, group.charLimit, group.items)}
+                      disabled={addSaving}
+                      className="px-2 py-1 text-xs text-muted-foreground rounded-md border border-dashed hover:border-primary hover:text-primary transition-colors"
+                      title="새 버전 추가"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
                     <div className="flex-1" />
-                    {!isEditing && activeItem && (
+                    {editing !== activeItem?.id && activeItem && (
                       <>
                         <Button variant="ghost" size="icon" className="h-7 w-7"
                           onClick={() => { setEditing(activeItem.id); setEditText(activeItem.answer); setEditQuestion(group.question); }}>
@@ -288,7 +313,7 @@ export default function ResumeDetailPage() {
                   </div>
 
                   {/* Content */}
-                  {activeItem && isEditing ? (
+                  {activeItem && editing === activeItem.id ? (
                     <div className="space-y-2">
                       <Textarea
                         value={editText}

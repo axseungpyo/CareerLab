@@ -82,6 +82,27 @@ async def generate_resume(req: GenerateRequest):
     )
 
 
+# ── Resume Items (must be before /{resume_id} to avoid route conflict) ──
+
+@router.post("/items", response_model=ResumeItemResponse, status_code=201)
+async def create_item(data: ResumeItemCreate):
+    gen = ResumeGenerator()
+    return gen.create_resume_item(data.model_dump(exclude_none=True))
+
+
+@router.put("/items/{item_id}", response_model=ResumeItemResponse)
+async def update_item(item_id: str, data: ResumeItemUpdate):
+    gen = ResumeGenerator()
+    return gen.update_resume_item(item_id, data.model_dump(exclude_none=True))
+
+
+@router.delete("/items/{item_id}", status_code=204)
+async def delete_item(item_id: str):
+    """Delete a resume item."""
+    gen = ResumeGenerator()
+    gen._db.table("resume_items").delete().eq("id", item_id).execute()
+
+
 # ── Resume CRUD ──
 
 @router.post("", response_model=ResumeResponse, status_code=201)
@@ -121,31 +142,10 @@ async def update_status(resume_id: str, data: StatusUpdate):
     )
 
 
-# ── Resume Items ──
-
-@router.post("/items", response_model=ResumeItemResponse, status_code=201)
-async def create_item(data: ResumeItemCreate):
-    gen = ResumeGenerator()
-    return gen.create_resume_item(data.model_dump(exclude_none=True))
-
-
 @router.get("/{resume_id}/items", response_model=list[ResumeItemResponse])
 async def list_items(resume_id: str):
     gen = ResumeGenerator()
     return gen.get_resume_items(resume_id)
-
-
-@router.put("/items/{item_id}", response_model=ResumeItemResponse)
-async def update_item(item_id: str, data: ResumeItemUpdate):
-    gen = ResumeGenerator()
-    return gen.update_resume_item(item_id, data.model_dump(exclude_none=True))
-
-
-@router.delete("/items/{item_id}", status_code=204)
-async def delete_item(item_id: str):
-    """Delete a resume item."""
-    gen = ResumeGenerator()
-    gen._db.table("resume_items").delete().eq("id", item_id).execute()
 
 
 @router.get("/{resume_id}/items/versions")
