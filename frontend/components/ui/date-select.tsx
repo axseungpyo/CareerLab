@@ -1,5 +1,6 @@
 "use client";
 
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -9,87 +10,61 @@ import {
 } from "@/components/ui/select";
 
 interface DateSelectProps {
-  value: string;                    // "YYYY-MM" or "YYYY-MM-DD"
+  value: string;
   onChange: (value: string) => void;
-  mode?: "month" | "date";         // month: 년-월, date: 년-월-일
-  yearRange?: [number, number];    // [start, end]
+  mode?: "month" | "date";
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
-const MONTHS = Array.from({ length: 12 }, (_, i) => ({
-  value: String(i + 1).padStart(2, "0"),
-  label: `${i + 1}월`,
-}));
-
-const DAYS = Array.from({ length: 31 }, (_, i) => ({
-  value: String(i + 1).padStart(2, "0"),
-  label: `${i + 1}일`,
-}));
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: 36 }, (_, i) => currentYear + 5 - i);
 
 export default function DateSelect({
   value,
   onChange,
   mode = "month",
-  yearRange,
-  placeholder = "선택",
+  placeholder,
   className,
+  disabled,
 }: DateSelectProps) {
-  const currentYear = new Date().getFullYear();
-  const [startYear, endYear] = yearRange || [currentYear - 30, currentYear + 5];
-
-  const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
-    const y = endYear - i;
-    return { value: String(y), label: `${y}년` };
-  });
-
   const parts = value ? value.split("-") : [];
   const year = parts[0] || "";
-  const month = parts[1] || "";
-  const day = parts[2] || "";
+  const rest = parts.slice(1).join("-"); // "MM" or "MM-DD"
 
-  function buildValue(y: string, m: string, d: string) {
-    if (!y) return "";
-    if (mode === "month") return m ? `${y}-${m}` : y;
-    return m && d ? `${y}-${m}-${d}` : m ? `${y}-${m}` : y;
+  function handleYearChange(y: string) {
+    if (!y) { onChange(""); return; }
+    if (rest) {
+      onChange(`${y}-${rest}`);
+    } else {
+      onChange(mode === "month" ? `${y}-01` : `${y}-01-01`);
+    }
+  }
+
+  function handleInputChange(v: string) {
+    onChange(v);
   }
 
   return (
-    <div className={`flex gap-1.5 ${className || ""}`}>
-      <Select value={year} onValueChange={(v) => onChange(buildValue(v || "", month, day))}>
-        <SelectTrigger className="text-sm h-9 flex-1 min-w-[80px]">
-          <SelectValue placeholder={placeholder === "선택" ? "년도" : placeholder} />
+    <div className={`flex gap-1.5 items-center ${className || ""}`}>
+      <Select value={year} onValueChange={(v) => handleYearChange(v || "")} disabled={disabled}>
+        <SelectTrigger className="text-sm h-9 w-[90px] shrink-0">
+          <SelectValue placeholder={placeholder || "년도"} />
         </SelectTrigger>
         <SelectContent className="max-h-60">
-          {years.map((y) => (
-            <SelectItem key={y.value} value={y.value}>{y.label}</SelectItem>
+          {YEARS.map((y) => (
+            <SelectItem key={y} value={String(y)}>{y}년</SelectItem>
           ))}
         </SelectContent>
       </Select>
-
-      <Select value={month} onValueChange={(v) => onChange(buildValue(year || String(currentYear), v || "", day))} disabled={!year}>
-        <SelectTrigger className="text-sm h-9 w-[72px]">
-          <SelectValue placeholder="월" />
-        </SelectTrigger>
-        <SelectContent>
-          {MONTHS.map((m) => (
-            <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {mode === "date" && (
-        <Select value={day} onValueChange={(v) => onChange(buildValue(year || String(currentYear), month || "01", v || ""))} disabled={!month}>
-          <SelectTrigger className="text-sm h-9 w-[72px]">
-            <SelectValue placeholder="일" />
-          </SelectTrigger>
-          <SelectContent className="max-h-60">
-            {DAYS.map((d) => (
-              <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
+      <Input
+        type={mode}
+        value={value}
+        onChange={(e) => handleInputChange(e.target.value)}
+        className="text-sm h-9 flex-1"
+        disabled={disabled}
+      />
     </div>
   );
 }
