@@ -25,7 +25,7 @@ export interface Profile {
   core_values?: string[];
   // Samsung-style extended fields
   name_en?: string;
-  address?: string;
+  name_hanja?: string;
   phone_secondary?: string;
   military_service?: MilitaryService;
   hobbies?: string;

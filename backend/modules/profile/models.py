@@ -52,7 +52,7 @@ class ProfileCreate(BaseModel):
     core_values: list[str] | None = None
     # Samsung-style extended fields
     name_en: str | None = None
-    address: str | None = None
+    name_hanja: str | None = None  # DB column: address (reused)
     phone_secondary: str | None = None
     military_service: MilitaryService | dict | None = None
     hobbies: str | None = None
@@ -74,7 +74,7 @@ class ProfileUpdate(BaseModel):
     career_goal: str | None = None
     core_values: list[str] | None = None
     name_en: str | None = None
-    address: str | None = None
+    name_hanja: str | None = None  # DB column: address (reused)
     phone_secondary: str | None = None
     military_service: MilitaryService | dict | None = None
     hobbies: str | None = None
@@ -97,7 +97,7 @@ class ProfileResponse(BaseModel):
     career_goal: str | None = None
     core_values: list[str] | None = None
     name_en: str | None = None
-    address: str | None = None
+    name_hanja: str | None = None  # DB column: address (reused)
     phone_secondary: str | None = None
     military_service: MilitaryService | dict | None = None
     hobbies: str | None = None

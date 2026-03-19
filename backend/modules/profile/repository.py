@@ -35,12 +35,22 @@ class ProfileRepository:
             payload["education"] = [e if isinstance(e, dict) else e for e in payload["education"]]
         if "military_service" in payload and hasattr(payload["military_service"], "model_dump"):
             payload["military_service"] = payload["military_service"].model_dump(exclude_none=True)
+        # Map name_hanja → address DB column
+        if "name_hanja" in payload:
+            payload["address"] = payload.pop("name_hanja")
         result = self._db.table("profiles").insert(payload).execute()
-        return result.data[0]
+        return self._map_profile(result.data[0])
+
+    @staticmethod
+    def _map_profile(row: dict) -> dict:
+        """Map DB column 'address' → API field 'name_hanja'."""
+        if "address" in row:
+            row["name_hanja"] = row.pop("address")
+        return row
 
     def get_profile(self, profile_id: str) -> dict | None:
         result = self._db.table("profiles").select("*").eq("id", profile_id).execute()
-        return result.data[0] if result.data else None
+        return self._map_profile(result.data[0]) if result.data else None
 
     def get_first_profile(self) -> dict | None:
         result = (
@@ -50,19 +60,22 @@ class ProfileRepository:
             .limit(1)
             .execute()
         )
-        return result.data[0] if result.data else None
+        return self._map_profile(result.data[0]) if result.data else None
 
     def update_profile(self, profile_id: str, data: ProfileUpdate) -> dict:
         payload = data.model_dump(exclude_none=True)
         if "military_service" in payload and hasattr(payload["military_service"], "model_dump"):
             payload["military_service"] = payload["military_service"].model_dump(exclude_none=True)
+        # Map name_hanja → address DB column
+        if "name_hanja" in payload:
+            payload["address"] = payload.pop("name_hanja")
         result = (
             self._db.table("profiles")
             .update(payload)
             .eq("id", profile_id)
             .execute()
         )
-        return result.data[0]
+        return self._map_profile(result.data[0])
 
     def delete_profile(self, profile_id: str) -> None:
         self._db.table("profiles").delete().eq("id", profile_id).execute()

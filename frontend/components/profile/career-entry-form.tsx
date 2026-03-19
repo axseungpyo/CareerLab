@@ -203,13 +203,13 @@ export default function CareerEntryForm({
                   현재 근무 중
                 </label>
                 <Input
-                  type="date"
+                  type="month"
                   placeholder="시작일"
                   value={periodStart}
                   onChange={(e) => setPeriodStart(e.target.value)}
                 />
                 <Input
-                  type="date"
+                  type="month"
                   placeholder="종료일"
                   value={periodEnd}
                   onChange={(e) => setPeriodEnd(e.target.value)}
@@ -247,13 +247,13 @@ export default function CareerEntryForm({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Input
-                  type="date"
+                  type="month"
                   placeholder="시작일"
                   value={periodStart}
                   onChange={(e) => setPeriodStart(e.target.value)}
                 />
                 <Input
-                  type="date"
+                  type="month"
                   placeholder="종료일"
                   value={periodEnd}
                   onChange={(e) => setPeriodEnd(e.target.value)}

@@ -23,7 +23,7 @@ interface ParsedData { profile?: Record<string, unknown>; career_entries?: Recor
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "basic", label: "기본정보" }, { id: "education", label: "학력" }, { id: "courses", label: "이수교과목" },
-  { id: "career", label: "경력" }, { id: "languages", label: "외국어·자격" }, { id: "essay", label: "Essay" },
+  { id: "career", label: "경력" }, { id: "languages", label: "외국어·자격" }, { id: "essay", label: "자기소개" },
   { id: "import", label: "가져오기" },
 ];
 
@@ -47,7 +47,7 @@ export default function ProfilePage() {
   const [careerGoal, setCareerGoal] = useState("");
   const [coreValues, setCoreValues] = useState<string[]>([]);
   const [nameEn, setNameEn] = useState("");
-  const [address, setAddress] = useState("");
+  const [nameHanja, setNameHanja] = useState("");
   const [phoneSecondary, setPhoneSecondary] = useState("");
   const [militaryService, setMilitaryService] = useState<MilitaryService>({});
   const [hobbies, setHobbies] = useState("");
@@ -82,7 +82,7 @@ export default function ProfilePage() {
         setPhone(p.phone || ""); setSummary(p.summary || "");
         setCareerGoal(p.career_goal || ""); setCoreValues(p.core_values || []);
         setEducation(p.education || []); setNameEn(p.name_en || "");
-        setAddress(p.address || ""); setPhoneSecondary(p.phone_secondary || "");
+        setNameHanja(p.name_hanja || ""); setPhoneSecondary(p.phone_secondary || "");
         setMilitaryService(p.military_service || {}); setHobbies(p.hobbies || "");
         setSpecialties(p.specialties || "");
         setRoleModel(p.role_model || ""); setRoleModelReason(p.role_model_reason || "");
@@ -118,7 +118,7 @@ export default function ProfilePage() {
         summary: summary || undefined, career_goal: careerGoal || undefined,
         core_values: coreValues.length > 0 ? coreValues : undefined,
         education: education.filter((e) => e.school),
-        name_en: nameEn || undefined, address: address || undefined,
+        name_en: nameEn || undefined, name_hanja: nameHanja || undefined,
         phone_secondary: phoneSecondary || undefined,
         military_service: militaryService.status ? militaryService : undefined,
         hobbies: hobbies || undefined, specialties: specialties || undefined,
@@ -223,8 +223,8 @@ export default function ProfilePage() {
             phone={phone} setPhone={setPhone} summary={summary} setSummary={setSummary}
             careerGoal={careerGoal} setCareerGoal={setCareerGoal} coreValues={coreValues} setCoreValues={setCoreValues} />
           <Separator />
-          <BasicInfoExtended nameEn={nameEn} setNameEn={setNameEn} address={address}
-            setAddress={setAddress} phoneSecondary={phoneSecondary} setPhoneSecondary={setPhoneSecondary} />
+          <BasicInfoExtended nameEn={nameEn} setNameEn={setNameEn} nameHanja={nameHanja}
+            setNameHanja={setNameHanja} phoneSecondary={phoneSecondary} setPhoneSecondary={setPhoneSecondary} />
           <MilitaryForm value={militaryService} onChange={setMilitaryService} />
         </div>
       )}

@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 interface BasicInfoExtendedProps {
   nameEn: string;
   setNameEn: (v: string) => void;
-  address: string;
-  setAddress: (v: string) => void;
+  nameHanja: string;
+  setNameHanja: (v: string) => void;
   phoneSecondary: string;
   setPhoneSecondary: (v: string) => void;
 }
@@ -16,8 +16,8 @@ interface BasicInfoExtendedProps {
 export default function BasicInfoExtended({
   nameEn,
   setNameEn,
-  address,
-  setAddress,
+  nameHanja,
+  setNameHanja,
   phoneSecondary,
   setPhoneSecondary,
 }: BasicInfoExtendedProps) {
@@ -51,23 +51,25 @@ export default function BasicInfoExtended({
             />
           </div>
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">주소</Label>
-          <Input
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="서울특별시 강남구..."
-            className="text-sm"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">보조 연락처</Label>
-          <Input
-            value={phoneSecondary}
-            onChange={(e) => setPhoneSecondary(e.target.value)}
-            placeholder="010-0000-0000"
-            className="text-sm"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs">한자이름</Label>
+            <Input
+              value={nameHanja}
+              onChange={(e) => setNameHanja(e.target.value)}
+              placeholder="洪承杓"
+              className="text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">보조 연락처</Label>
+            <Input
+              value={phoneSecondary}
+              onChange={(e) => setPhoneSecondary(e.target.value)}
+              placeholder="010-0000-0000"
+              className="text-sm"
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

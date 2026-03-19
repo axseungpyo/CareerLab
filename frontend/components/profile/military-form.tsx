@@ -66,19 +66,18 @@ export default function MilitaryForm({ value, onChange }: MilitaryFormProps) {
 
         {showDetails && (
           <>
-            <div className="space-y-1.5">
-              <Label className="text-xs">병역구분</Label>
-              <Select value={value.discharge_type || ""} onValueChange={(v) => update({ discharge_type: v || undefined })}>
-                <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
-                <SelectContent>
-                  {DISCHARGE_TYPE.map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">병역구분</Label>
+                <Select value={value.discharge_type || ""} onValueChange={(v) => update({ discharge_type: v || undefined })}>
+                  <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
+                  <SelectContent>
+                    {DISCHARGE_TYPE.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">군별</Label>
                 <Select value={value.branch || ""} onValueChange={(v) => update({ branch: v || undefined })}>
@@ -103,11 +102,11 @@ export default function MilitaryForm({ value, onChange }: MilitaryFormProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">복무 시작</Label>
                 <Input
-                  type="date"
+                  type="month"
                   value={value.period_start || ""}
                   onChange={(e) => update({ period_start: e.target.value || undefined })}
                   className="text-sm"
@@ -116,7 +115,7 @@ export default function MilitaryForm({ value, onChange }: MilitaryFormProps) {
               <div className="space-y-1.5">
                 <Label className="text-xs">복무 종료</Label>
                 <Input
-                  type="date"
+                  type="month"
                   value={value.period_end || ""}
                   onChange={(e) => update({ period_end: e.target.value || undefined })}
                   className="text-sm"
@@ -130,9 +129,9 @@ export default function MilitaryForm({ value, onChange }: MilitaryFormProps) {
                 <Input
                   value={value.note || ""}
                   onChange={(e) => update({ note: e.target.value.slice(0, 100) })}
-                  placeholder="복무 중 특기사항"
+                  placeholder="복무 중 특기사항 (선택)"
                   maxLength={100}
-                  className="text-sm"
+                  className="text-sm pr-14"
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
                   {(value.note || "").length}/100
