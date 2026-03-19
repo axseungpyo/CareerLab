@@ -107,17 +107,22 @@ export default function DateSelect({
             <button type="button" onClick={() => {
               if (view === "month") setNavYear(navYear - 1);
               else if (view === "year") setNavYear(navYear - 12);
-              else setNavMonth(navMonth === 1 ? (setNavYear(navYear - 1), 12) : navMonth - 1);
+              else if (navMonth === 1) { setNavYear(navYear - 1); setNavMonth(12); }
+              else setNavMonth(navMonth - 1);
             }} className="p-1 rounded hover:bg-muted">
               <ChevronLeft className="w-4 h-4" />
             </button>
 
             <button
               type="button"
-              onClick={() => setView(view === "year" ? "month" : "year")}
+              onClick={() => {
+                if (view === "year") setView("month");
+                else if (view === "day") setView("month");
+                else setView("year");
+              }}
               className="text-sm font-semibold hover:text-primary transition-colors px-2 py-0.5 rounded hover:bg-muted"
             >
-              {view === "year" ? `${yearGrid[0]}–${yearGrid[11]}` :
+              {view === "year" ? `${yearGrid[0]} – ${yearGrid[11]}` :
                view === "day" ? `${navYear}년 ${navMonth}월` :
                `${navYear}년`}
             </button>
@@ -125,7 +130,8 @@ export default function DateSelect({
             <button type="button" onClick={() => {
               if (view === "month") setNavYear(navYear + 1);
               else if (view === "year") setNavYear(navYear + 12);
-              else setNavMonth(navMonth === 12 ? (setNavYear(navYear + 1), 1) : navMonth + 1);
+              else if (navMonth === 12) { setNavYear(navYear + 1); setNavMonth(1); }
+              else setNavMonth(navMonth + 1);
             }} className="p-1 rounded hover:bg-muted">
               <ChevronRight className="w-4 h-4" />
             </button>
