@@ -62,6 +62,40 @@ async def update_analysis(analysis_id: str, data: dict):
     return result
 
 
+@router.post("/parse-url")
+async def parse_job_posting_url(data: dict):
+    """Fetch and extract text from a job posting URL."""
+    import httpx
+    from bs4 import BeautifulSoup
+
+    url = data.get("url", "").strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="URL을 입력하세요.")
+
+    try:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            resp = await client.get(url, headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+            })
+            resp.raise_for_status()
+    except Exception:
+        raise HTTPException(status_code=422, detail="URL에 접근할 수 없습니다. 채용공고를 직접 붙여넣어 주세요.")
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    # Remove scripts, styles, nav, footer
+    for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+        tag.decompose()
+    text = soup.get_text(separator="\n", strip=True)
+    # Clean up excessive newlines
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    cleaned = "\n".join(lines)
+
+    if len(cleaned) < 50:
+        raise HTTPException(status_code=422, detail="채용공고 텍스트를 추출할 수 없습니다. 로그인이 필요한 페이지일 수 있습니다.")
+
+    return {"text": cleaned[:10000]}  # 최대 10000자
+
+
 @router.delete("/{analysis_id}", status_code=204)
 async def delete_analysis(analysis_id: str):
     """Delete a company analysis (checks FK references first)."""

@@ -20,6 +20,21 @@ export default function NewAnalysisPage() {
   const [jobPostingText, setJobPostingText] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [webSearch, setWebSearch] = useState(false);
+  const [parsing, setParsing] = useState(false);
+
+  async function handleParseUrl() {
+    if (!jobPostingUrl.trim()) { toast.error("URL을 먼저 입력하세요."); return; }
+    setParsing(true);
+    try {
+      const result = await api.post<{ text: string }>("/api/company/parse-url", { url: jobPostingUrl.trim() });
+      setJobPostingText(result.text);
+      toast.success("채용공고 텍스트를 추출했습니다.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "URL 파싱에 실패했습니다.");
+    } finally {
+      setParsing(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,14 +100,27 @@ export default function NewAnalysisPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="job_url">채용공고 URL (선택)</Label>
-              <Input
-                id="job_url"
-                type="url"
-                placeholder="https://..."
-                value={jobPostingUrl}
-                onChange={(e) => setJobPostingUrl(e.target.value)}
-                disabled={analyzing}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="job_url"
+                  type="url"
+                  placeholder="https://..."
+                  value={jobPostingUrl}
+                  onChange={(e) => setJobPostingUrl(e.target.value)}
+                  disabled={analyzing || parsing}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleParseUrl}
+                  disabled={analyzing || parsing || !jobPostingUrl.trim()}
+                >
+                  {parsing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "자동 추출"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">URL을 입력하고 &quot;자동 추출&quot;을 클릭하면 채용공고 텍스트를 자동으로 가져옵니다</p>
             </div>
 
             <div className="space-y-1.5">

@@ -11,11 +11,15 @@ import {
   ExternalLink,
   FileText,
   Globe,
+  Loader2,
+  Plus,
+  RefreshCw,
   Sparkles,
   Tag,
   Target,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +53,15 @@ export default function CompanyDetailPage() {
   const [analysis, setAnalysis] = useState<CompanyAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [reqFilter, setReqFilter] = useState("전체");
+  const [reanalyzing, setReanalyzing] = useState(false);
+
+  // Keyword editing
+  const [newKeyword, setNewKeyword] = useState("");
+
+  // Requirement adding
+  const [showAddReq, setShowAddReq] = useState(false);
+  const [newReqTag, setNewReqTag] = useState("필수");
+  const [newReqText, setNewReqText] = useState("");
 
   useEffect(() => {
     if (params.id) loadAnalysis(params.id as string);
@@ -72,6 +85,62 @@ export default function CompanyDetailPage() {
       router.push("/company");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "삭제 실패");
+    }
+  }
+
+  async function updateField(field: string, value: unknown) {
+    if (!analysis) return;
+    try {
+      const updated = await api.put<CompanyAnalysis>(`/api/company/${analysis.id}`, { [field]: value });
+      setAnalysis(updated);
+    } catch {
+      toast.error("업데이트에 실패했습니다.");
+    }
+  }
+
+  function removeKeyword(kw: string) {
+    if (!analysis?.keywords) return;
+    updateField("keywords", analysis.keywords.filter((k) => k !== kw));
+  }
+
+  function addKeyword() {
+    if (!newKeyword.trim() || !analysis) return;
+    const updated = [...(analysis.keywords || []), newKeyword.trim()];
+    updateField("keywords", updated);
+    setNewKeyword("");
+  }
+
+  function removeRequirement(idx: number) {
+    if (!analysis?.requirements) return;
+    updateField("requirements", (analysis.requirements as string[]).filter((_, i) => i !== idx));
+  }
+
+  function addRequirement() {
+    if (!newReqText.trim() || !analysis) return;
+    const item = `[${newReqTag}] ${newReqText.trim()}`;
+    updateField("requirements", [...(analysis.requirements as string[] || []), item]);
+    setNewReqText("");
+    setShowAddReq(false);
+  }
+
+  async function handleReanalyze() {
+    if (!analysis || !confirm("기존 분석 결과가 업데이트됩니다. 계속하시겠습니까?")) return;
+    setReanalyzing(true);
+    try {
+      const result = await api.post<CompanyAnalysis>("/api/company/analyze", {
+        company_name: analysis.company_name,
+        job_posting_text: analysis.job_posting_text || "",
+        job_posting_url: analysis.job_posting_url || undefined,
+        web_search: true,
+      });
+      // Delete old, redirect to new
+      await api.delete(`/api/company/${analysis.id}`).catch(() => {});
+      toast.success("재분석이 완료되었습니다.");
+      router.push(`/company/${result.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "재분석에 실패했습니다.");
+    } finally {
+      setReanalyzing(false);
     }
   }
 
@@ -153,6 +222,9 @@ export default function CompanyDetailPage() {
           <Link href={`/applications/new?companyName=${encodeURIComponent(analysis.company_name)}&analysisId=${analysis.id}`}>
             <Button size="sm" variant="outline"><Briefcase className="h-3.5 w-3.5 mr-1" />지원</Button>
           </Link>
+          <Button size="sm" variant="outline" onClick={handleReanalyze} disabled={reanalyzing}>
+            {reanalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          </Button>
           <Button size="sm" variant="ghost" className="text-destructive" onClick={handleDelete}>
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
@@ -227,20 +299,37 @@ export default function CompanyDetailPage() {
             )}
 
             {/* Keywords */}
-            {keywords.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-violet-500" />핵심 키워드
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="flex flex-wrap gap-2">
-                    {keywords.map((kw, i) => <Badge key={i} variant="secondary">{kw}</Badge>)}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-violet-500" />핵심 키워드
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {keywords.map((kw, i) => (
+                    <Badge key={i} variant="secondary" className="gap-1 pr-1">
+                      {kw}
+                      <button onClick={() => removeKeyword(kw)} className="ml-0.5 hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-1.5">
+                  <input
+                    value={newKeyword}
+                    onChange={(e) => setNewKeyword(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKeyword())}
+                    placeholder="키워드 추가..."
+                    className="flex-1 h-7 px-2 text-xs rounded-md border bg-background"
+                  />
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={addKeyword} disabled={!newKeyword.trim()}>
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
@@ -276,8 +365,9 @@ export default function CompanyDetailPage() {
                     const tagMatch = text.match(/^\[(.+?)\]\s*/);
                     const tag = tagMatch ? tagMatch[1] : null;
                     const content = tag && tagMatch ? text.replace(tagMatch[0], "") : text;
+                    const realIdx = requirements.indexOf(req);
                     return (
-                      <li key={i} className="flex items-start gap-2 text-sm">
+                      <li key={i} className="flex items-start gap-2 text-sm group">
                         {tag ? (
                           <span className={`shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${TAG_COLORS[tag] || "bg-muted text-muted-foreground"}`}>
                             {tag}
@@ -285,7 +375,10 @@ export default function CompanyDetailPage() {
                         ) : (
                           <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-orange-400 shrink-0" />
                         )}
-                        {content}
+                        <span className="flex-1">{content}</span>
+                        <button onClick={() => removeRequirement(realIdx)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity shrink-0 mt-0.5">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
                       </li>
                     );
                   })}
@@ -294,6 +387,25 @@ export default function CompanyDetailPage() {
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {requirements.length === 0 ? "요구사항이 없습니다." : `"${reqFilter}" 항목이 없습니다.`}
                 </p>
+              )}
+
+              {/* Add requirement */}
+              {showAddReq ? (
+                <div className="flex gap-1.5 items-end">
+                  <select value={newReqTag} onChange={(e) => setNewReqTag(e.target.value)} className="h-7 px-1.5 text-xs rounded-md border bg-background">
+                    {REQ_FILTERS.filter((f) => f !== "전체").map((f) => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                  <input value={newReqText} onChange={(e) => setNewReqText(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addRequirement())}
+                    placeholder="요구사항 내용..."
+                    className="flex-1 h-7 px-2 text-xs rounded-md border bg-background" autoFocus />
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={addRequirement} disabled={!newReqText.trim()}>추가</Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowAddReq(false)}>취소</Button>
+                </div>
+              ) : (
+                <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => setShowAddReq(true)}>
+                  <Plus className="h-3 w-3 mr-1" />요구사항 추가
+                </Button>
               )}
             </CardContent>
           </Card>
