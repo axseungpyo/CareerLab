@@ -244,7 +244,7 @@ export default function CompanyDetailPage() {
         <TabsContent value="summary">
           <div className="space-y-4">
             {/* Company Overview */}
-            {talentProfile?.company_overview && typeof talentProfile.company_overview === "object" && (
+            {typeof talentProfile?.company_overview === "object" && talentProfile.company_overview !== null && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">

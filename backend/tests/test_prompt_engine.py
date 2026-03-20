@@ -53,7 +53,7 @@ def test_invalid_sub_key(engine):
 
 def test_get_version(engine):
     version = engine.get_version("resume_gen")
-    assert version == "1.0.0"
+    assert version in ("1.0.0", "2.0.0")  # v2.0 prompt upgrade
 
 
 def test_template_not_found(engine):

@@ -28,15 +28,12 @@ def test_claude_oauth_tasks():
 
 
 def test_openai_tasks():
-    """company_analysis, file_parsing, embedding → OpenAI."""
-    openai_tasks = [
-        TaskType.company_analysis,
-        TaskType.file_parsing,
-        TaskType.embedding,
-    ]
-    for task in openai_tasks:
-        config = TASK_MODEL_MAP[task]
-        assert config.provider == Provider.openai
+    """embedding → OpenAI. (company_analysis, file_parsing moved to Claude in v0.8)"""
+    config = TASK_MODEL_MAP[TaskType.embedding]
+    assert config.provider == Provider.openai
+    # company_analysis and file_parsing now use Claude (v0.8 model unification)
+    assert TASK_MODEL_MAP[TaskType.company_analysis].provider == Provider.claude
+    assert TASK_MODEL_MAP[TaskType.file_parsing].provider == Provider.claude
 
 
 def test_stream_defaults():

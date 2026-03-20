@@ -163,7 +163,40 @@ class CompanyAnalyzer:
         result = self._db.table("company_analyses").insert(row).execute()
         stored = result.data[0]
         stored["analysis"] = analysis
+
+        # Auto-save expected_questions to essay_questions DB
+        expected_qs = analysis.get("expected_questions", [])
+        if isinstance(expected_qs, list) and expected_qs:
+            self._save_expected_questions(company_name, expected_qs)
+
         return stored
+
+    def _save_expected_questions(
+        self, company_name: str, questions: list[dict]
+    ) -> None:
+        """Save expected questions from analysis to essay_questions table.
+
+        Skips duplicates (same company + same question text).
+        """
+        existing = (
+            self._db.table("essay_questions")
+            .select("question")
+            .eq("company_name", company_name)
+            .execute()
+        )
+        existing_texts = {r["question"] for r in (existing.data or [])}
+
+        for i, q in enumerate(questions, 1):
+            q_text = q.get("question", "").strip()
+            if not q_text or q_text in existing_texts:
+                continue
+            self._db.table("essay_questions").insert({
+                "company_name": company_name,
+                "question_number": i,
+                "question": q_text,
+                "char_limit": q.get("char_limit"),
+                "category": q.get("focus_point"),
+            }).execute()
 
     def get_analysis(self, analysis_id: str) -> dict | None:
         result = (

@@ -132,7 +132,7 @@ export default function CompanyComparePage() {
             if (!tp) return <p className="text-xs text-muted-foreground">데이터 없음</p>;
             return (
               <div className="space-y-2">
-                {tp.core_values && Array.isArray(tp.core_values) && (
+                {Array.isArray(tp.core_values) && tp.core_values.length > 0 && (
                   <div>
                     <span className="text-[10px] text-muted-foreground">핵심가치</span>
                     <div className="flex flex-wrap gap-1 mt-0.5">
@@ -140,7 +140,7 @@ export default function CompanyComparePage() {
                     </div>
                   </div>
                 )}
-                {tp.ideal_candidate && (
+                {typeof tp.ideal_candidate === "string" && (
                   <div>
                     <span className="text-[10px] text-muted-foreground">이상적인 지원자</span>
                     <p className="text-xs mt-0.5 line-clamp-3">{String(tp.ideal_candidate)}</p>
