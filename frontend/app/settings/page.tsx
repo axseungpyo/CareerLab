@@ -343,6 +343,8 @@ export default function SettingsPage() {
               setOpenaiKey={setOpenaiKey}
               perplexityKey={perplexityKey}
               setPerplexityKey={setPerplexityKey}
+              serperKey={serperKey}
+              setSerperKey={setSerperKey}
               notionKey={notionKey}
               setNotionKey={setNotionKey}
               newTavilyKeys={newTavilyKeys}
@@ -372,7 +374,7 @@ export default function SettingsPage() {
 
 function ConnectionsTab({
   settings, status, claudeKey, setClaudeKey, openaiKey, setOpenaiKey,
-  perplexityKey, setPerplexityKey, notionKey, setNotionKey,
+  perplexityKey, setPerplexityKey, serperKey, setSerperKey, notionKey, setNotionKey,
   newTavilyKeys, setNewTavilyKeys,
   supabaseUrl, setSupabaseUrl,
   supabaseAnonKey, setSupabaseAnonKey, supabaseServiceKey, setSupabaseServiceKey,
@@ -383,6 +385,7 @@ function ConnectionsTab({
   claudeKey: string; setClaudeKey: (v: string) => void;
   openaiKey: string; setOpenaiKey: (v: string) => void;
   perplexityKey: string; setPerplexityKey: (v: string) => void;
+  serperKey: string; setSerperKey: (v: string) => void;
   notionKey: string; setNotionKey: (v: string) => void;
   newTavilyKeys: NewTavilyKey[]; setNewTavilyKeys: (v: NewTavilyKey[]) => void;
   supabaseUrl: string; setSupabaseUrl: (v: string) => void;
