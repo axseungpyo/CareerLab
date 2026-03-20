@@ -19,6 +19,7 @@ export default function NewAnalysisPage() {
   const [jobPostingUrl, setJobPostingUrl] = useState("");
   const [jobPostingText, setJobPostingText] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeStep, setAnalyzeStep] = useState(0); // 0=idle, 1=입력확인, 2=웹검색, 3=AI분석, 4=저장
   const [webSearch, setWebSearch] = useState(false);
   const [parsing, setParsing] = useState(false);
 
@@ -48,6 +49,10 @@ export default function NewAnalysisPage() {
     }
 
     setAnalyzing(true);
+    setAnalyzeStep(1);
+    // Simulate step progression (actual API is single call)
+    const stepTimer = setTimeout(() => setAnalyzeStep(webSearch ? 2 : 3), 1000);
+    const stepTimer2 = webSearch ? setTimeout(() => setAnalyzeStep(3), 5000) : undefined;
     try {
       const result = await api.post<CompanyAnalysis>("/api/company/analyze", {
         company_name: companyName.trim(),
@@ -55,12 +60,16 @@ export default function NewAnalysisPage() {
         job_posting_url: jobPostingUrl.trim() || undefined,
         web_search: webSearch,
       });
+      setAnalyzeStep(4);
       toast.success("기업 분석이 완료되었습니다!");
-      router.push(`/company/${result.id}`);
+      setTimeout(() => router.push(`/company/${result.id}`), 500);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "분석에 실패했습니다.");
     } finally {
+      clearTimeout(stepTimer);
+      if (stepTimer2) clearTimeout(stepTimer2);
       setAnalyzing(false);
+      setAnalyzeStep(0);
     }
   }
 
@@ -171,6 +180,31 @@ export default function NewAnalysisPage() {
                 </>
               )}
             </Button>
+
+            {/* Progress Steps */}
+            {analyzing && (
+              <div className="space-y-2 pt-2">
+                {[
+                  { step: 1, label: "채용공고 입력 확인" },
+                  ...(webSearch ? [{ step: 2, label: "웹 리서치 진행 중 (기업문화/뉴스/채용)" }] : []),
+                  { step: 3, label: "AI 분석 진행 중" },
+                  { step: 4, label: "결과 저장" },
+                ].map(({ step, label }) => (
+                  <div key={step} className="flex items-center gap-2 text-sm">
+                    {analyzeStep > step ? (
+                      <span className="text-green-500">✅</span>
+                    ) : analyzeStep === step ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                    ) : (
+                      <span className="h-3.5 w-3.5 rounded-full border-2 border-muted inline-block" />
+                    )}
+                    <span className={analyzeStep >= step ? "text-foreground" : "text-muted-foreground"}>
+                      {label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>

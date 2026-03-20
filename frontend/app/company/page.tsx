@@ -77,11 +77,18 @@ export default function CompanyListPage() {
             채용공고를 AI로 분석하여 요구사항과 키워드를 추출합니다
           </p>
         </div>
-        <Link href="/company/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />새 분석
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          {analyses.length >= 2 && (
+            <Link href="/company/compare">
+              <Button variant="outline">비교</Button>
+            </Link>
+          )}
+          <Link href="/company/new">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />새 분석
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Search */}
