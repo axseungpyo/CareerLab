@@ -8,6 +8,7 @@ class CompanyAnalysisCreate(BaseModel):
     job_posting_text: str
     job_posting_url: str | None = None
     research_notes: str | None = None
+    web_search: bool = True
 
 
 class CompanyAnalysisResponse(BaseModel):

@@ -23,7 +23,8 @@ async def analyze_company(data: CompanyAnalysisCreate):
     """Run company analysis (GPT-4o-mini + web search)."""
     analyzer = CompanyAnalyzer()
     return await analyzer.analyze(
-        data.company_name, data.job_posting_text, data.job_posting_url
+        data.company_name, data.job_posting_text, data.job_posting_url,
+        web_search=data.web_search,
     )
 
 
@@ -39,6 +40,22 @@ async def get_analysis(analysis_id: str):
     """Get a single company analysis."""
     _validate_uuid(analysis_id)
     analyzer = CompanyAnalyzer()
+    result = analyzer.get_analysis(analysis_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="기업 분석을 찾을 수 없습니다.")
+    return result
+
+
+@router.put("/{analysis_id}", response_model=CompanyAnalysisResponse)
+async def update_analysis(analysis_id: str, data: dict):
+    """Partial update of analysis fields (keywords, requirements, etc.)."""
+    _validate_uuid(analysis_id)
+    allowed = {"keywords", "requirements", "talent_profile", "research_notes"}
+    update_data = {k: v for k, v in data.items() if k in allowed}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="업데이트할 필드가 없습니다.")
+    analyzer = CompanyAnalyzer()
+    analyzer._db.table("company_analyses").update(update_data).eq("id", analysis_id).execute()
     result = analyzer.get_analysis(analysis_id)
     if not result:
         raise HTTPException(status_code=404, detail="기업 분석을 찾을 수 없습니다.")

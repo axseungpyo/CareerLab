@@ -84,6 +84,13 @@ async def search_company_deep(company_name: str) -> dict[str, list[dict]]:
         gathered = await asyncio.gather(*tasks.values(), return_exceptions=True)
         for key, result in zip(tasks.keys(), gathered):
             results[key] = result if isinstance(result, list) else []
+    elif provider == "serper":
+        import asyncio
+        tasks = {key: _search_serper(query, max_results=3) for key, query in queries.items()}
+        gathered = await asyncio.gather(*tasks.values(), return_exceptions=True)
+        for key, result in zip(tasks.keys(), gathered):
+            results[key] = result if isinstance(result, list) else []
+
     else:
         results = {"culture": [], "news": [], "hiring": []}
 
@@ -209,4 +216,46 @@ async def _search_perplexity_custom(
             "description": "",
             "url": cite_url,
         })
+    return results[:max_results]
+
+
+# ── Serper (Google SERP) ──
+
+
+async def _search_serper(query: str, max_results: int = 5) -> list[dict]:
+    """Search using Serper.dev Google SERP API."""
+    settings = load_app_settings()
+    api_key = settings.llm.search.serper_api_key
+    if not api_key:
+        return []
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        try:
+            resp = await client.post(
+                "https://google.serper.dev/search",
+                headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
+                json={"q": query, "gl": "kr", "hl": "ko", "num": max_results},
+            )
+            resp.raise_for_status()
+        except httpx.HTTPError:
+            return []
+
+    data = resp.json()
+    results = []
+
+    kg = data.get("knowledgeGraph")
+    if kg:
+        results.append({
+            "title": kg.get("title", ""),
+            "description": kg.get("description", ""),
+            "url": kg.get("website", ""),
+        })
+
+    for item in data.get("organic", [])[:max_results]:
+        results.append({
+            "title": item.get("title", ""),
+            "description": item.get("snippet", ""),
+            "url": item.get("link", ""),
+        })
+
     return results[:max_results]

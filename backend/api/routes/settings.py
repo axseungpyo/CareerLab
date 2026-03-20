@@ -42,6 +42,8 @@ def _masked_settings(s: AppSettings) -> dict:
     data["llm"]["search"]["tavily_keys"] = []
     data["llm"]["search"]["perplexity_api_key_masked"] = _mask_key(s.llm.search.perplexity_api_key)
     data["llm"]["search"]["has_perplexity_key"] = bool(s.llm.search.perplexity_api_key)
+    data["llm"]["search"]["serper_api_key_masked"] = _mask_key(s.llm.search.serper_api_key)
+    data["llm"]["search"]["has_serper_key"] = bool(s.llm.search.serper_api_key)
     # Notion
     data["llm"]["notion"]["api_key_masked"] = _mask_key(s.llm.notion.api_key)
     data["llm"]["notion"]["has_key"] = bool(s.llm.notion.api_key)
@@ -56,6 +58,7 @@ def _masked_settings(s: AppSettings) -> dict:
     data["llm"]["claude"]["api_key"] = ""
     data["llm"]["openai"]["api_key"] = ""
     data["llm"]["search"]["perplexity_api_key"] = ""
+    data["llm"]["search"]["serper_api_key"] = ""
     data["supabase"]["anon_key"] = ""
     data["supabase"]["service_role_key"] = ""
     return data
@@ -102,6 +105,8 @@ async def put_settings(req: SettingsUpdateRequest):
                 search["tavily_keys"] = [k.model_dump() for k in current.llm.search.tavily_keys]
             if "perplexity_api_key" not in search:
                 search["perplexity_api_key"] = current.llm.search.perplexity_api_key
+            if "serper_api_key" not in search:
+                search["serper_api_key"] = current.llm.search.serper_api_key
         if "notion" in llm:
             if "api_key" not in llm["notion"]:
                 llm["notion"]["api_key"] = current.llm.notion.api_key
@@ -159,7 +164,7 @@ async def connection_status():
 
     # Search
     search = app.llm.search
-    provider_labels = {"tavily": "Tavily", "perplexity": "Perplexity Sonar"}
+    provider_labels = {"tavily": "Tavily", "perplexity": "Perplexity Sonar", "serper": "Serper (Google)"}
     provider_label = provider_labels.get(search.provider, search.provider)
 
     search_st = {"status": "disabled", "message": "웹 검색이 비활성화되어 있습니다."}
@@ -183,6 +188,11 @@ async def connection_status():
                 search_st = {"status": "valid", "message": "Perplexity Sonar 연결됨"}
             else:
                 search_st = {"status": "missing", "message": "Perplexity API Key가 없습니다."}
+        elif search.provider == "serper":
+            if search.serper_api_key:
+                search_st = {"status": "valid", "message": "Serper (Google) 연결됨"}
+            else:
+                search_st = {"status": "missing", "message": "Serper API Key가 없습니다."}
 
     # Notion
     notion = app.llm.notion

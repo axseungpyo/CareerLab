@@ -19,6 +19,7 @@ export default function NewAnalysisPage() {
   const [jobPostingUrl, setJobPostingUrl] = useState("");
   const [jobPostingText, setJobPostingText] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
+  const [webSearch, setWebSearch] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,6 +38,7 @@ export default function NewAnalysisPage() {
         company_name: companyName.trim(),
         job_posting_text: jobPostingText.trim(),
         job_posting_url: jobPostingUrl.trim() || undefined,
+        web_search: webSearch,
       });
       toast.success("기업 분석이 완료되었습니다!");
       router.push(`/company/${result.id}`);
@@ -109,6 +111,20 @@ export default function NewAnalysisPage() {
                 자격요건, 우대사항, 직무설명 등을 포함하면 더 정확한 분석이 가능합니다
               </p>
             </div>
+
+            <label className="flex items-center gap-2.5 cursor-pointer p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+              <input
+                type="checkbox"
+                checked={webSearch}
+                onChange={(e) => setWebSearch(e.target.checked)}
+                disabled={analyzing}
+                className="h-4 w-4 rounded border-input"
+              />
+              <div>
+                <p className="text-sm font-medium">웹 리서치 포함</p>
+                <p className="text-xs text-muted-foreground">기업 최신 뉴스, 문화, 채용 트렌드를 웹에서 검색하여 분석에 반영합니다</p>
+              </div>
+            </label>
 
             <Button
               type="submit"

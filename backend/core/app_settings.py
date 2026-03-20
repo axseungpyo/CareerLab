@@ -37,13 +37,14 @@ class TavilyKeyEntry(BaseModel):
 class SearchSettings(BaseModel):
     """Web search provider configuration.
 
-    provider: "tavily" | "perplexity"
+    provider: "tavily" | "perplexity" | "serper"
     tavily_keys: list of {alias, api_key} — auto-rotates on rate limit
     """
     enabled: bool = True
     provider: str = "tavily"
     tavily_keys: list[TavilyKeyEntry] = []
     perplexity_api_key: str = ""
+    serper_api_key: str = ""
 
 
 class NotionSettings(BaseModel):

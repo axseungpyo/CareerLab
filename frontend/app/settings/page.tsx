@@ -47,6 +47,9 @@ interface SearchConfig {
   perplexity_api_key: string;
   perplexity_api_key_masked?: string;
   has_perplexity_key?: boolean;
+  serper_api_key?: string;
+  serper_api_key_masked?: string;
+  has_serper_key?: boolean;
 }
 
 interface NotionConfig {
@@ -136,6 +139,7 @@ export default function SettingsPage() {
   const [claudeKey, setClaudeKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
   const [perplexityKey, setPerplexityKey] = useState("");
+  const [serperKey, setSerperKey] = useState("");
   const [notionKey, setNotionKey] = useState("");
   const [newTavilyKeys, setNewTavilyKeys] = useState<NewTavilyKey[]>([]);
   const [supabaseUrl, setSupabaseUrl] = useState("");
@@ -200,6 +204,7 @@ export default function SettingsPage() {
             provider: settings.llm.search.provider,
             ...(tavilyKeysPayload.length > 0 ? { tavily_keys: tavilyKeysPayload } : {}),
             ...(perplexityKey ? { perplexity_api_key: perplexityKey } : {}),
+            ...(serperKey ? { serper_api_key: serperKey } : {}),
           },
           notion: {
             enabled: settings.llm.notion.enabled,
@@ -218,6 +223,7 @@ export default function SettingsPage() {
       setClaudeKey("");
       setOpenaiKey("");
       setPerplexityKey("");
+      setSerperKey("");
       setNotionKey("");
       setNewTavilyKeys([]);
       setSupabaseAnonKey("");
@@ -607,9 +613,10 @@ function ConnectionsTab({
                 }) : s);
               }}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue>{{ tavily: "Tavily (AI 검색)", serper: "Serper (Google SERP)", perplexity: "Perplexity Sonar (검색+요약)" }[settings.llm.search.provider] || settings.llm.search.provider}</SelectValue></SelectTrigger>
               <SelectContent>
                 <SelectItem value="tavily">Tavily (AI 검색)</SelectItem>
+                <SelectItem value="serper">Serper (Google SERP)</SelectItem>
                 <SelectItem value="perplexity">Perplexity Sonar (검색+요약)</SelectItem>
               </SelectContent>
             </Select>
@@ -709,8 +716,28 @@ function ConnectionsTab({
             </div>
           )}
 
+          {/* Serper Key */}
+          {settings.llm.search.provider === "serper" && (
+            <div>
+              <Label className="text-xs">
+                Serper API Key
+                {settings.llm.search.has_serper_key && (
+                  <span className="ml-1 text-green-600 dark:text-green-400 text-[10px]">설정됨</span>
+                )}
+              </Label>
+              <Input
+                type="password"
+                value={serperKey}
+                onChange={(e) => setSerperKey(e.target.value)}
+                placeholder={settings.llm.search.has_serper_key ? "변경 시 입력" : "Serper API Key 입력"}
+                className="font-mono text-xs"
+              />
+            </div>
+          )}
+
           <p className="text-[11px] text-muted-foreground">
             {settings.llm.search.provider === "tavily" && "AI 에이전트/RAG에 최적화된 구조화 검색 결과 반환. 한도 초과 시 자동 키 전환."}
+            {settings.llm.search.provider === "serper" && "Google SERP 직접 접근. Tavily 대비 53배 저렴 ($0.30/1K). 한국어 검색 지원."}
             {settings.llm.search.provider === "perplexity" && "검색 + LLM 요약을 한 번에 수행. 출처 포함."}
           </p>
         </CardContent>

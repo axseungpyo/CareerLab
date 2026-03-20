@@ -42,11 +42,15 @@ class CompanyAnalyzer:
         company_name: str,
         job_posting_text: str,
         job_posting_url: str | None = None,
+        web_search: bool = True,
     ) -> dict:
-        """Analyze job posting with deep web research → store company_analyses row."""
+        """Analyze job posting with optional deep web research → store company_analyses row."""
 
-        # Deep search — 3 parallel category queries
-        search_results = await search_company_deep(company_name)
+        # Deep search — 3 parallel category queries (skip if web_search=False)
+        if web_search:
+            search_results = await search_company_deep(company_name)
+        else:
+            search_results = {"culture": [], "news": [], "hiring": []}
         has_search = any(search_results.get(k) for k in ("culture", "news", "hiring"))
 
         # Build template variables
