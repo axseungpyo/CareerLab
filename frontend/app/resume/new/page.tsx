@@ -20,6 +20,7 @@ import type { CompanyAnalysis, EssayQuestion, Profile } from "@/lib/types";
 import { Building2, Plus, Trash2, Loader2, Check, FileText } from "lucide-react";
 
 const STEPS = ["기업 선택", "자소서 작성"] as const;
+type WriteMode = "with-analysis" | "direct";
 
 interface EssayDraft {
   text: string;
@@ -64,10 +65,14 @@ export default function NewResumePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(0);
+  const [writeMode, setWriteMode] = useState<WriteMode>("with-analysis");
 
   // Step 1
   const [analyses, setAnalyses] = useState<CompanyAnalysis[]>([]);
   const [selectedAnalysis, setSelectedAnalysis] = useState<CompanyAnalysis | null>(null);
+
+  // Direct mode
+  const [directTitle, setDirectTitle] = useState("");
   const [showNewForm, setShowNewForm] = useState(false);
   const [newCompany, setNewCompany] = useState("");
   const [newPosting, setNewPosting] = useState("");
@@ -146,11 +151,12 @@ export default function NewResumePage() {
   }
 
   function goToStep2() {
-    if (!selectedAnalysis) {
-      toast.error("기업을 선택해주세요.");
-      return;
+    if (writeMode === "with-analysis") {
+      if (!selectedAnalysis) { toast.error("기업을 선택해주세요."); return; }
+      loadEssayQuestions(selectedAnalysis.company_name);
+    } else {
+      setEssayItems([newItem()]);
     }
-    loadEssayQuestions(selectedAnalysis.company_name);
     setStep(1);
   }
 
@@ -192,7 +198,6 @@ export default function NewResumePage() {
     if (!item.question.trim()) { toast.error("문항을 입력해주세요."); return; }
     if (item.drafts.length >= 3) { toast.error("최대 3안까지 생성 가능합니다."); return; }
     if (!profile) { toast.error("프로필을 먼저 등록해주세요."); return; }
-    if (!selectedAnalysis) return;
 
     const draftIdx = item.drafts.length;
     // Add new generating draft
@@ -209,7 +214,7 @@ export default function NewResumePage() {
         "/api/resume/generate",
         {
           profile_id: profile.id,
-          company_analysis_id: selectedAnalysis.id,
+          company_analysis_id: selectedAnalysis?.id || undefined,
           question: item.question,
           char_limit: item.charLimit,
           tone,
@@ -253,7 +258,7 @@ export default function NewResumePage() {
   }
 
   async function handleSaveAll() {
-    if (!profile || !selectedAnalysis) return;
+    if (!profile) return;
     const filled = essayItems.filter((it) => it.question.trim() && it.answer.trim());
     if (filled.length === 0) {
       toast.error("저장할 자소서가 없습니다. 최소 1개 문항에 내용을 작성해주세요.");
@@ -261,10 +266,13 @@ export default function NewResumePage() {
     }
     setSaving(true);
     try {
+      const title = writeMode === "with-analysis" && selectedAnalysis
+        ? `${selectedAnalysis.company_name} 자소서`
+        : directTitle.trim() || "자소서";
       const resume = await api.post<{ id: string }>("/api/resume", {
         profile_id: profile.id,
-        company_analysis_id: selectedAnalysis.id,
-        title: `${selectedAnalysis.company_name} 자소서`,
+        company_analysis_id: selectedAnalysis?.id || undefined,
+        title,
       });
       for (const item of filled) {
         await api.post("/api/resume/items", {
@@ -308,87 +316,113 @@ export default function NewResumePage() {
         ))}
       </div>
 
-      {/* Step 1: 기업 선택 */}
+      {/* Step 1: 기업 선택 또는 바로 작성 */}
       {step === 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5" /> 기업 선택
+              <Building2 className="w-5 h-5" /> 자소서 생성 방식
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {analyses.length > 0 ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {analyses.map((a) => (
-                  <button
-                    key={a.id}
-                    onClick={() => setSelectedAnalysis(a)}
-                    className={`text-left p-4 rounded-lg border-2 transition-colors ${
-                      selectedAnalysis?.id === a.id
-                        ? "border-primary bg-primary/5"
-                        : "border-muted hover:border-muted-foreground/30"
-                    }`}
-                  >
-                    <p className="font-medium">{a.company_name}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(a.analyzed_at).toLocaleDateString("ko-KR")}
-                    </p>
-                    {a.keywords && a.keywords.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {a.keywords.slice(0, 3).map((k, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            {k}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">분석된 기업이 없습니다.</p>
+            {/* Mode Toggle */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => { setWriteMode("with-analysis"); setSelectedAnalysis(null); }}
+                className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                  writeMode === "with-analysis" ? "border-primary bg-primary/5" : "border-muted hover:border-muted-foreground/30"
+                }`}
+              >
+                <p className="font-medium text-sm">기업분석 기반 생성</p>
+                <p className="text-xs text-muted-foreground mt-1">기업 분석 결과를 활용하여 AI가 맞춤 자소서 생성</p>
+              </button>
+              <button
+                onClick={() => setWriteMode("direct")}
+                className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                  writeMode === "direct" ? "border-primary bg-primary/5" : "border-muted hover:border-muted-foreground/30"
+                }`}
+              >
+                <p className="font-medium text-sm">바로 작성</p>
+                <p className="text-xs text-muted-foreground mt-1">기업분석 없이 직접 문항과 내용을 작성</p>
+              </button>
+            </div>
+
+            {/* With Analysis Mode */}
+            {writeMode === "with-analysis" && (
+              <>
+                {analyses.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {analyses.map((a) => (
+                      <button
+                        key={a.id}
+                        onClick={() => setSelectedAnalysis(a)}
+                        className={`text-left p-4 rounded-lg border-2 transition-colors ${
+                          selectedAnalysis?.id === a.id
+                            ? "border-primary bg-primary/5"
+                            : "border-muted hover:border-muted-foreground/30"
+                        }`}
+                      >
+                        <p className="font-medium">{a.company_name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(a.analyzed_at).toLocaleDateString("ko-KR")}
+                        </p>
+                        {a.keywords && a.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {a.keywords.slice(0, 3).map((k, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">{k}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">분석된 기업이 없습니다.</p>
+                )}
+
+                {!showNewForm ? (
+                  <Button variant="outline" onClick={() => setShowNewForm(true)} className="gap-1">
+                    <Plus className="w-4 h-4" /> 새 기업분석 시작
+                  </Button>
+                ) : (
+                  <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                    <Input value={newCompany} onChange={(e) => setNewCompany(e.target.value)} placeholder="기업명 (예: 삼성전자)" />
+                    <Textarea value={newPosting} onChange={(e) => setNewPosting(e.target.value)} rows={5} placeholder="채용공고 내용을 붙여넣기 하세요" />
+                    <Input value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="채용공고 URL (선택)" />
+                    <div className="flex gap-2">
+                      <Button onClick={handleNewAnalysis} disabled={analyzing || !newCompany || !newPosting} className="btn-gradient border-0 gap-1">
+                        {analyzing && <Loader2 className="w-4 h-4 animate-spin" />}분석 시작
+                      </Button>
+                      <Button variant="ghost" onClick={() => setShowNewForm(false)}>취소</Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
-            {!showNewForm ? (
-              <Button variant="outline" onClick={() => setShowNewForm(true)} className="gap-1">
-                <Plus className="w-4 h-4" /> 새 기업분석 시작
-              </Button>
-            ) : (
+            {/* Direct Mode */}
+            {writeMode === "direct" && (
               <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-                <Input
-                  value={newCompany}
-                  onChange={(e) => setNewCompany(e.target.value)}
-                  placeholder="기업명 (예: 삼성전자)"
-                />
-                <Textarea
-                  value={newPosting}
-                  onChange={(e) => setNewPosting(e.target.value)}
-                  rows={5}
-                  placeholder="채용공고 내용을 붙여넣기 하세요"
-                />
-                <Input
-                  value={newUrl}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                  placeholder="채용공고 URL (선택)"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleNewAnalysis}
-                    disabled={analyzing || !newCompany || !newPosting}
-                    className="btn-gradient border-0 gap-1"
-                  >
-                    {analyzing && <Loader2 className="w-4 h-4 animate-spin" />}
-                    분석 시작
-                  </Button>
-                  <Button variant="ghost" onClick={() => setShowNewForm(false)}>
-                    취소
-                  </Button>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">자소서 제목</label>
+                  <Input
+                    value={directTitle}
+                    onChange={(e) => setDirectTitle(e.target.value)}
+                    placeholder="예: 2026 상반기 삼성전자 자소서"
+                  />
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  기업분석 없이 작성합니다. AI 생성 시 프로필 경력만 참고합니다.
+                </p>
               </div>
             )}
 
             <div className="flex justify-end">
-              <Button onClick={goToStep2} disabled={!selectedAnalysis} className="btn-gradient border-0">
+              <Button
+                onClick={goToStep2}
+                disabled={writeMode === "with-analysis" ? !selectedAnalysis : !directTitle.trim()}
+                className="btn-gradient border-0"
+              >
                 다음
               </Button>
             </div>

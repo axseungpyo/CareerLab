@@ -26,14 +26,14 @@ class CompanyAnalysisResponse(BaseModel):
 
 class ResumeCreate(BaseModel):
     profile_id: str
-    company_analysis_id: str
+    company_analysis_id: str | None = None
     title: str
 
 
 class ResumeResponse(BaseModel):
     id: str
     profile_id: str
-    company_analysis_id: str
+    company_analysis_id: str | None = None
     title: str
     status: str
     result: str | None = None
@@ -72,7 +72,7 @@ class ResumeItemUpdate(BaseModel):
 
 class GenerateRequest(BaseModel):
     profile_id: str
-    company_analysis_id: str
+    company_analysis_id: str | None = None
     question: str
     char_limit: int | None = None
     tone: str | None = "전문적"

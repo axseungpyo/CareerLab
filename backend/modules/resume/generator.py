@@ -27,22 +27,23 @@ class ResumeGenerator:
     async def generate(
         self,
         profile_id: str,
-        company_analysis_id: str,
-        question: str,
+        company_analysis_id: str | None = None,
+        question: str = "",
         char_limit: int | None = None,
         tone: str = "전문적",
         emphasis: str | None = None,
         stream: bool = True,
     ) -> str | AsyncIterator[str]:
         """Generate a resume answer via Claude streaming."""
-        # 1. Load company analysis
-        analysis = self._analyzer.get_analysis(company_analysis_id)
-        if not analysis:
-            raise ValueError("기업 분석 데이터를 찾을 수 없습니다.")
+        # 1. Load company analysis (optional)
+        analysis = None
+        if company_analysis_id:
+            analysis = self._analyzer.get_analysis(company_analysis_id)
 
         # 2. Semantic search for matching career entries (skip if embedding unavailable)
         try:
-            search_query = f"{question} {' '.join(analysis.get('keywords', []))}"
+            keywords = analysis.get("keywords", []) if analysis else []
+            search_query = f"{question} {' '.join(keywords)}"
             matched = await self._embedding.semantic_search(search_query, profile_id)
         except Exception:
             matched = []
@@ -51,10 +52,10 @@ class ResumeGenerator:
         # 3. Render prompt
         company_summary = json.dumps(
             {
-                "company": analysis.get("company_name"),
-                "requirements": analysis.get("requirements"),
-                "talent_profile": analysis.get("talent_profile"),
-                "keywords": analysis.get("keywords"),
+                "company": analysis.get("company_name") if analysis else "(미지정)",
+                "requirements": analysis.get("requirements") if analysis else [],
+                "talent_profile": analysis.get("talent_profile") if analysis else {},
+                "keywords": analysis.get("keywords") if analysis else [],
             },
             ensure_ascii=False,
         )
