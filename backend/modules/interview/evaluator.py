@@ -77,10 +77,7 @@ class InterviewEvaluator:
         ]
 
         raw = await call_llm(llm_messages, TaskType.feedback, stream=False)
-        try:
-            evaluation = json.loads(raw)
-        except json.JSONDecodeError:
-            evaluation = {"overall_score": 0, "error": "평가 파싱 실패"}
+        evaluation = self._parse_json(raw)
 
         # Update session
         self._db.table("mock_sessions").update({
@@ -95,3 +92,19 @@ class InterviewEvaluator:
             pass  # scores stored in evaluation JSON
 
         return {"session_id": session_id, **evaluation}
+
+    @staticmethod
+    def _parse_json(raw: str) -> dict:
+        """Parse JSON from LLM response, handling markdown code fences."""
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            pass
+        start = raw.find("{")
+        end = raw.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                return json.loads(raw[start : end + 1])
+            except json.JSONDecodeError:
+                pass
+        return {"overall_score": 0, "error": "평가 파싱 실패"}

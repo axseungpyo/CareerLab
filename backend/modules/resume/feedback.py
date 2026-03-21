@@ -34,10 +34,8 @@ class FeedbackEngine:
         }
         messages = self._prompt.render("feedback", variables)
         raw = await call_llm(messages, TaskType.feedback, stream=False)
-        try:
-            analysis = json.loads(raw)
-        except json.JSONDecodeError:
-            analysis = {"error": "분석 결과 파싱 실패", "raw": raw}
+        analysis = self._parse_json(raw)
+
 
         scores = analysis.get("scores", {})
         row = {
@@ -52,6 +50,22 @@ class FeedbackEngine:
         }
         result = self._db.table("feedback_reports").insert(row).execute()
         return result.data[0]
+
+    @staticmethod
+    def _parse_json(raw: str) -> dict:
+        """Parse JSON from LLM response, handling markdown code fences."""
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            pass
+        start = raw.find("{")
+        end = raw.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                return json.loads(raw[start : end + 1])
+            except json.JSONDecodeError:
+                pass
+        return {"error": "분석 결과 파싱 실패", "raw": raw[:500]}
 
     def get_report(self, report_id: str) -> dict | None:
         result = (

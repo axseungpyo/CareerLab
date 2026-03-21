@@ -67,9 +67,8 @@ class QuestionGenerator:
         messages = self._prompt.render("interview", variables, sub_key="question_gen")
         raw = await call_llm(messages, TaskType.question_gen, json_mode=False)
 
-        try:
-            questions = json.loads(raw)
-        except json.JSONDecodeError:
+        questions = self._parse_json_array(raw)
+        if not questions:
             return []
 
         # Store questions
@@ -85,6 +84,25 @@ class QuestionGenerator:
             result = self._db.table("interview_questions").insert(row).execute()
             stored.append(result.data[0])
         return stored
+
+    @staticmethod
+    def _parse_json_array(raw: str) -> list:
+        """Parse JSON array from LLM response, handling markdown code fences."""
+        try:
+            result = json.loads(raw)
+            return result if isinstance(result, list) else []
+        except json.JSONDecodeError:
+            pass
+        # Try extracting array from markdown fences
+        start = raw.find("[")
+        end = raw.rfind("]")
+        if start >= 0 and end > start:
+            try:
+                result = json.loads(raw[start : end + 1])
+                return result if isinstance(result, list) else []
+            except json.JSONDecodeError:
+                pass
+        return []
 
     def get_questions(self, resume_id: str) -> list[dict]:
         result = (
